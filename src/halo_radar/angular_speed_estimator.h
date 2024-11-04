@@ -1,7 +1,9 @@
 #ifndef ANGULAR_SPEED_ESTIMATOR_H
 #define ANGULAR_SPEED_ESTIMATOR_H
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
+#include <map>
+#include <cmath>
 
 struct AngularSpeedEstimator
 {
@@ -14,11 +16,11 @@ struct AngularSpeedEstimator
   double measurement_variance = pow(0.045, 2.0);
   double process_noise_variance = pow(0.0015, 2.0); // allows for rpm change
 
-  std::map<ros::Time, double> measurement_buffer;
-  ros::Duration measurement_buffer_duration = ros::Duration(0.75);
-  ros::Duration max_measurement_gap = ros::Duration(0.45);
+  std::map<rclcpp::Time, double> measurement_buffer;
+  rclcpp::Duration measurement_buffer_duration = rclcpp::Duration::from_seconds(0.75);
+  rclcpp::Duration max_measurement_gap = rclcpp::Duration::from_seconds(0.45);
 
-  double update(ros::Time t, double angle)
+  double update(rclcpp::Time t, double angle)
   {
     if(measurement_buffer.empty() || (t > measurement_buffer.rbegin()->first && t < measurement_buffer.rbegin()->first+max_measurement_gap))
     {
@@ -53,7 +55,7 @@ struct AngularSpeedEstimator
 
         // measurement update
 
-        measured_angular_speed = angle_difference/(t-measurement_buffer.begin()->first).toSec();
+        measured_angular_speed = angle_difference/(t-measurement_buffer.begin()->first).seconds();
 
         auto k = estimated_variance/(estimated_variance+measurement_variance);
         prediction_error = measured_angular_speed-angular_speed;
@@ -76,6 +78,5 @@ struct AngularSpeedEstimator
     return angular_speed;
   }
 };
-
 
 #endif
