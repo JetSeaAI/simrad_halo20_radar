@@ -212,6 +212,17 @@ void Radar::startThreads()
     m_reportThread = std::thread(&Radar::reportThread,this);
 }
 
+/**
+ * @brief Creates a UDP listener socket for a specified multicast address and port.
+ *
+ * This function creates a socket, sets necessary socket options, binds it to the specified port,
+ * and joins the specified multicast group.
+ *
+ * @param interface The local interface address to use for the multicast group.
+ * @param mcast_address The multicast group address to join.
+ * @param port The port number to bind the socket to.
+ * @return int The file descriptor of the created socket, or a negative value if an error occurred.
+ */
 int Radar::createListenerSocket(uint32_t interface, uint32_t mcast_address, uint16_t port)
 {
     int ret = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -252,6 +263,18 @@ int Radar::createListenerSocket(uint32_t interface, uint32_t mcast_address, uint
     return ret;
 }
 
+/**
+ * @brief Thread function to receive and process radar data.
+ * 
+ * This function creates a listening socket to receive radar data packets.
+ * It continuously listens for incoming data, processes the received data,
+ * and extracts scanlines from the radar data. The extracted scanlines are
+ * then passed to the processData function for further processing.
+ * 
+ * The function runs in an infinite loop until the exit flag is set.
+ * 
+ * @note This function is intended to be run in a separate thread.
+ */
 void Radar::dataThread()
 {
     int data_socket = createListenerSocket(m_addresses.interface,
@@ -305,6 +328,39 @@ void Radar::dataThread()
     close(data_socket);
 }
 
+/**
+ * @brief This function runs a thread that listens for radar report data on a specified socket.
+ * 
+ * The function creates a listener socket and continuously listens for incoming radar report data.
+ * It processes the received data based on the report ID and updates the radar state accordingly.
+ * The function supports various radar report IDs and extracts relevant information from the data.
+ * If the radar state is updated, it triggers the stateUpdated() callback.
+ * 
+ * @note The function runs indefinitely until the m_exitFlag is set to true.
+ * 
+ * @details The function performs the following steps:
+ * 1. Creates a listener socket using the specified interface, address, and port.
+ * 2. Enters an infinite loop to listen for incoming radar report data.
+ * 3. Checks the m_exitFlag to determine if the loop should be exited.
+ * 4. Receives data from the socket and processes it based on the report ID.
+ * 5. Updates the radar state based on the extracted information.
+ * 6. Triggers the stateUpdated() callback if the radar state is updated.
+ * 7. Closes the listener socket when the loop is exited.
+ * 
+ * The function handles the following radar report IDs:
+ * - 0xc401: Radar status report
+ * - 0xc402: Radar range and mode report
+ * - 0xc403: (Not implemented)
+ * - 0xc404: Radar bearing alignment and antenna height report
+ * - 0xc406: (Not implemented)
+ * - 0xc408: Radar sea state and scan speed report
+ * - 0xc409: (Not implemented)
+ * - 0xc40a: (Not implemented)
+ * - 0xc611: Heartbeat report
+ * 
+ * @param None
+ * @return None
+ */
 void Radar::reportThread()
 {
     int report_socket = createListenerSocket(m_addresses.interface,
