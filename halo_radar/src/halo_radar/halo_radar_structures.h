@@ -149,6 +149,84 @@ struct RadarReport_c404
   uint8_t lights;
 };
 
+//c407 still trying decoding
+struct RadarReport_c407
+{
+  uint8_t what;                          // 0  0x07
+  uint8_t command;                       // 1  0xC4
+  uint8_t field2;                         // 2
+  uint8_t field3;                         // 3
+  uint8_t field4;                         // 4
+  uint8_t field5;                         // 5
+  uint8_t field6;                         // 6
+  uint8_t field7;                         // 7
+  uint8_t field8;                         // 8
+  uint8_t field9;                         // 9
+  uint8_t field10;                        // 10
+  uint8_t field11;                        // 11
+  uint8_t field12;                        // 12
+  uint8_t field13;                        // 13
+  uint8_t field14;                        // 14
+  uint8_t field15;                        // 15
+  uint8_t field16;                        // 16
+  uint16_t field17;                       // 17-18
+  uint8_t field19;                      // 19
+  uint8_t field20;                       // 20
+  uint8_t field21;                       // 21
+  uint8_t field22;                       // 22
+  uint8_t field23;                       // 23
+  uint8_t field24;                       // 24
+  uint8_t field25;                       // 25
+  uint8_t field26;                       // 26
+  uint8_t field27;                       // 27
+  uint8_t field28;                       // 28
+  uint8_t field29;                       // 29
+  uint8_t field30;                       // 30
+  uint8_t field31;                       // 31
+  uint8_t field32;                       // 32
+  uint8_t field33;                       // 33
+  uint8_t field34;                       // 34
+  uint8_t field35;                       // 35
+  uint8_t field36;                       // 36
+  uint8_t field37;                       // 37
+  uint8_t field38;                       // 38
+  uint8_t field39;                       // 39
+  uint8_t field40;                       // 40
+  uint8_t field41;                       // 41
+  uint8_t field42;                       // 42
+  uint8_t field43;                       // 43
+  uint8_t field44;                       // 44
+  uint8_t field45;                       // 45
+  uint8_t field46;                       // 46
+  uint8_t field47;                       // 47
+  uint8_t field48;                       // 48
+  uint8_t field49;                       // 49
+  uint8_t field50;                       // 50
+  uint8_t field51;                       // 51
+  uint8_t field52;                       // 52
+  uint8_t field53;                       // 53
+  uint8_t field54;                       // 54
+  uint8_t field55;                       // 55
+  uint8_t field56;                       // 56
+  uint8_t field57;                       // 57
+  uint8_t field58;                       // 58
+  uint8_t field59;                       // 59
+  uint8_t field60;                       // 60
+  uint8_t field61;                       // 61
+  uint8_t field62;                       // 62
+  uint8_t field63;                       // 63
+  uint8_t field64;                       // 64
+  uint8_t field65;                       // 65
+  uint8_t field66;                       // 66
+  uint8_t field67;                       // 67
+  uint8_t field68;                       // 68
+  uint8_t field69;                       // 69
+  uint8_t field70;                       // 70
+  uint8_t field71;                       // 71
+  uint8_t field72;                       // 72
+};
+
+
 struct RadarReport_c408
 {
   uint8_t what;                          // 0  0x08

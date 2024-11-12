@@ -7,6 +7,7 @@
 #include <cstring>
 #include <iostream>
 #include <unistd.h>
+#include <iomanip>
 
 namespace halo_radar
 {
@@ -142,7 +143,7 @@ std::vector<AddressSet> scan(const std::vector<uint32_t> & addresses)
                 std::cerr << nbytes << " bytes" << std::endl;
                 std::cerr << "is it " << sizeof(RadarReport_b201) << " bytes and start with b201?" << std::endl;
                 RadarReport_b201* b201 =  reinterpret_cast<RadarReport_b201*>(in_data);
-                if(nbytes == sizeof(RadarReport_b201) && b201->id == 0xb201)
+                if(nbytes >= 150 && b201->id == 0xb201)
                 {
                     AddressSet asa;
                     asa.label = "HaloA";
@@ -520,9 +521,27 @@ void Radar::reportThread()
                     case 0xc406:
                         // not sure
                         break;
+                    case 0xc407:
+                        // settings?
+                        {
+                        std::cerr << "Received settings data: ";
+                        for (int i = 0; i < nbytes; ++i)
+                        {
+                            std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)in_data[i] << " ";
+                        }
+                        std::cerr << std::dec << std::endl;
+                            break;
+                        }
+                        break;
                     case 0xc408:
                     {
                         RadarReport_c408 *c408 = reinterpret_cast<RadarReport_c408*>(in_data);
+                        std::cerr << "Received data: ";
+                        for (int i = 0; i < nbytes; ++i)
+                        {
+                            std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)in_data[i] << " ";
+                        }
+                        std::cerr << std::dec << std::endl;
                         if(nbytes >= sizeof(RadarReport_c408))
                         {
                             switch(c408->sea_state)
