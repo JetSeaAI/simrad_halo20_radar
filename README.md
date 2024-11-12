@@ -22,8 +22,24 @@ ros2 run halo_radar halo_radar
 
 By default, the driver will scan all available interfaces. To restrict which interface(s) to use, specify the list of IP local addresses using the ~hostIPs parameter.
 
+Note: This can't bring up radar for now, need to use thrid-party software to support:
+
+    https://opencpn.org/index.html
+
 ## Troubleshooting
 
 To make sure route is available: sudo route add -net 224.0.0.0 netmask 224.0.0.0 eth0
 
 Switches and routers between the radar and the machine running the driver may interfere with multicast packets. Consult network equipment documentation or simply the network path.
+
+## TODO
+
+try to visually the radar echo data in rviz2
+
+try to make the rqt plugins for reconfigure
+
+for reference:
+
+    http://www.shichangshan.xyz/archives/introductionandusageofrqtinros2
+
+    https://stackoverflow.com/questions/77934193/how-can-i-create-a-simple-gui-using-an-rqt-plugin

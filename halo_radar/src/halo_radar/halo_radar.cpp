@@ -389,7 +389,7 @@ void Radar::reportThread()
             {
                 std::map<std::string,std::string> new_state;
                 uint16_t id = *reinterpret_cast<uint16_t*>(in_data);
-
+                bool state_updated = false;
                 switch(id)
                 {
                     case 0xc401:
@@ -536,12 +536,6 @@ void Radar::reportThread()
                     case 0xc408:
                     {
                         RadarReport_c408 *c408 = reinterpret_cast<RadarReport_c408*>(in_data);
-                        std::cerr << "Received data: ";
-                        for (int i = 0; i < nbytes; ++i)
-                        {
-                            std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)in_data[i] << " ";
-                        }
-                        std::cerr << std::dec << std::endl;
                         if(nbytes >= sizeof(RadarReport_c408))
                         {
                             switch(c408->sea_state)
@@ -634,6 +628,7 @@ void Radar::reportThread()
                             }
                             
                             new_state["doppler_speed"] = std::to_string(c408->doppler_speed/100.0);
+                            state_updated = true; //force update
                         }
                         break;
                     }
@@ -649,7 +644,7 @@ void Radar::reportThread()
                         std::cerr << "id: " << std::showbase << std::hex << id << std::noshowbase << std::dec << std::endl;                        
                 }
                 
-                bool state_updated = false;
+                
                 for(auto kv: new_state)
                 {
                     if(m_state.find(kv.first) == m_state.end() || m_state[kv.first] != kv.second)
