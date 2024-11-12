@@ -13,6 +13,11 @@
   <depend>marine_sensor_msgs</depend>
   <depend>rosbag2</depend>
   <depend>rclcpp</depend>
+  <build_depend>rclpy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>opencv</build_depend>
+
 
 
 <export>
