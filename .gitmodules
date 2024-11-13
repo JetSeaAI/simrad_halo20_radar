@@ -1,6 +1,6 @@
 [submodule "marine_msgs"]
 	path = marine_msgs
-	url = https://github.com/JetSeaAI/marine_msgs.git
+	url = git@github.com:JetSeaAI/marine_msgs.git
 [submodule "marine_radar_control_msgs"]
 	path = marine_radar_control_msgs
-	url = https://github.com/JetSeaAI/marine_radar_control_msgs.git
+	url = git@github.com:JetSeaAI/marine_radar_control_msgs.git
