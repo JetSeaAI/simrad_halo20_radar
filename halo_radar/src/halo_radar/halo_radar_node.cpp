@@ -5,7 +5,11 @@
 #include "marine_sensor_msgs/msg/radar_sector.hpp"
 #include "marine_radar_control_msgs/msg/radar_control_set.hpp"
 #include "marine_radar_control_msgs/msg/radar_control_value.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/callback_group.hpp"
+#include "rmw/qos_profiles.h"
+#include "rclcpp/qos.hpp"
 #include <future>
 #include "angular_speed_estimator.h"
 
@@ -51,18 +55,25 @@
  * - m_frame_id: Frame ID.
  * - m_estimator: Angular speed estimator.
  */
+using std::placeholders::_1;
+
 class RosRadar : public halo_radar::Radar, public rclcpp::Node
 {
 public:
   RosRadar(halo_radar::AddressSet const &addresses) 
     : halo_radar::Radar(addresses), Node("ros_radar_" + addresses.label)
   {
+
+
     m_data_pub = this->create_publisher<marine_sensor_msgs::msg::RadarSector>(addresses.label + "/data", 10);
     m_state_pub = this->create_publisher<marine_radar_control_msgs::msg::RadarControlSet>(addresses.label + "/state", 10);
     m_state_change_sub = this->create_subscription<marine_radar_control_msgs::msg::RadarControlValue>(
-        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this, std::placeholders::_1));
+        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this,_1));
+        //heartbeat and all subscriptions can't receive messages debugging
     m_heartbeat_timer = this->create_wall_timer(
         std::chrono::seconds(1), std::bind(&RosRadar::hbTimerCallback, this));
+    m_test_sub = this->create_subscription<std_msgs::msg::String>(
+        addresses.label + "/test", 10, std::bind(&RosRadar::testCallback, this,_1));
 
     this->declare_parameter<double>("range_correction_factor", m_rangeCorrectionFactor);
     this->declare_parameter<std::string>("frame_id", m_frame_id);
@@ -110,7 +121,6 @@ protected:
     if (scan_time > 0)
       time_increment = std::abs(rs.angle_increment)/scan_time;
     rs.time_increment =  rclcpp::Duration::from_seconds(time_increment);
-
     m_data_pub->publish(rs);
   }
 
@@ -161,13 +171,20 @@ protected:
 private:
   void stateChangeCallback(const marine_radar_control_msgs::msg::RadarControlValue::SharedPtr cv)
   {
+    RCLCPP_INFO(this->get_logger(), "State change requested: key=%s, value=%s", cv->key.c_str(), cv->value.c_str());
     sendCommand(cv->key, cv->value);
+  }
+  void testCallback(const std_msgs::msg::String::SharedPtr msg)
+  {
+    std::cout << "I heard: '" << msg->data << "'" << std::endl;
+    RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
   }
 
   void hbTimerCallback()
   {
     if (checkHeartbeat())
       stateUpdated();
+    RCLCPP_INFO(this->get_logger(), "Heartbeat");
   }
 
   void createEnumControl(std::string const &name, std::string const &label, std::string const enums[],
@@ -225,6 +242,7 @@ private:
   rclcpp::Publisher<marine_radar_control_msgs::msg::RadarControlSet>::SharedPtr m_state_pub;
   rclcpp::Subscription<marine_radar_control_msgs::msg::RadarControlValue>::SharedPtr m_state_change_sub;
   rclcpp::TimerBase::SharedPtr m_heartbeat_timer;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr m_test_sub;
 
   double m_rangeCorrectionFactor = 1.024;
   std::string m_frame_id = "radar";
@@ -251,12 +269,14 @@ void odometryCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
   }
 }
 
+
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("halo_radar");
   std::vector<std::shared_ptr<RosRadar>> radars;
   std::vector<uint32_t> hostIPs;
+
   if (node->has_parameter("hostIPs"))
   {
     std::vector<std::string> hostIPstrings;
@@ -283,12 +303,9 @@ int main(int argc, char **argv)
       }
     }
   });
-
-  auto odom_sub = node->create_subscription<nav_msgs::msg::Odometry>(
-      "odom", 10, odometryCallback);
-
+  
   rclcpp::spin(node);
-
+  
   rclcpp::shutdown();
   return 0;
 }

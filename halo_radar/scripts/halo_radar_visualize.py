@@ -29,6 +29,7 @@ class RadarVisualizeNode(Node):
         self.image.data = [0 for _ in range(1024 * 1024)]
         self.timer = None
         self.angle_increment = None
+        self.offset=2 * np.pi
         
         
         # Configure sector
@@ -52,7 +53,7 @@ class RadarVisualizeNode(Node):
         for i, intensitie in enumerate(intensities):
             angle = angle_start + i * angle_increment
             if angle > np.pi:
-                angle -= 2 * np.pi
+                angle -= self.offset
             self.get_logger().info(f"angle={angle} length of intensities.echoes: {len(intensitie.echoes)}")
             # self.get_logger().info(f"intensitie.echoes: {intensitie.echoes}")
             self.refreshImage(angle, intensitie.echoes)
