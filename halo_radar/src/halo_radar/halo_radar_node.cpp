@@ -60,28 +60,47 @@ using std::placeholders::_1;
 class RosRadar : public halo_radar::Radar, public rclcpp::Node
 {
 public:
-  RosRadar(halo_radar::AddressSet const &addresses) 
+  RosRadar(halo_radar::AddressSet const &addresses)
     : halo_radar::Radar(addresses), Node("ros_radar_" + addresses.label)
   {
-
+    // Create a separate callback group for subscriptions and timers
+    //Finaly fixed the callback issue.....
+    auto callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
     m_data_pub = this->create_publisher<marine_sensor_msgs::msg::RadarSector>(addresses.label + "/data", 10);
     m_state_pub = this->create_publisher<marine_radar_control_msgs::msg::RadarControlSet>(addresses.label + "/state", 10);
+    
+    rclcpp::SubscriptionOptions options;
+    options.callback_group = callback_group;
+
     m_state_change_sub = this->create_subscription<marine_radar_control_msgs::msg::RadarControlValue>(
-        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this,_1));
-        //heartbeat and all subscriptions can't receive messages debugging
+        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this,_1), options);
     m_heartbeat_timer = this->create_wall_timer(
-        std::chrono::seconds(1), std::bind(&RosRadar::hbTimerCallback, this));
-    m_test_sub = this->create_subscription<std_msgs::msg::String>(
-        addresses.label + "/test", 10, std::bind(&RosRadar::testCallback, this,_1));
+      std::chrono::seconds(1), std::bind(&RosRadar::hbTimerCallback, this),
+      callback_group);
 
     this->declare_parameter<double>("range_correction_factor", m_rangeCorrectionFactor);
     this->declare_parameter<std::string>("frame_id", m_frame_id);
     this->get_parameter("range_correction_factor", m_rangeCorrectionFactor);
     this->get_parameter("frame_id", m_frame_id);
 
+    // Create a separate executor for the callback group
+    m_executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    m_executor->add_callback_group(callback_group, this->get_node_base_interface());
+    m_executor_thread = std::thread([this]() { m_executor->spin(); });
+
     startThreads();
   }
+
+  ~RosRadar()
+  {
+    m_executor->cancel();
+    if (m_executor_thread.joinable())
+    {
+      m_executor_thread.join();
+    }
+  }
+
 
 protected:
   void processData(std::vector<halo_radar::Scanline> const &scanlines) override
@@ -248,6 +267,9 @@ private:
   std::string m_frame_id = "radar";
 
   AngularSpeedEstimator m_estimator;
+
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> m_executor;
+  std::thread m_executor_thread;
 };
 
 std::shared_ptr<halo_radar::HeadingSender> headingSender;
@@ -276,7 +298,6 @@ int main(int argc, char **argv)
   auto node = std::make_shared<rclcpp::Node>("halo_radar");
   std::vector<std::shared_ptr<RosRadar>> radars;
   std::vector<uint32_t> hostIPs;
-
   if (node->has_parameter("hostIPs"))
   {
     std::vector<std::string> hostIPstrings;
@@ -304,8 +325,12 @@ int main(int argc, char **argv)
     }
   });
   
-  rclcpp::spin(node);
-  
+  while (rclcpp::ok())
+  {
+    rclcpp::spin(node);
+  }
+
+
   rclcpp::shutdown();
   return 0;
 }
