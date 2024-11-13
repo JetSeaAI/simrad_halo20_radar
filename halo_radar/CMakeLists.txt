@@ -47,6 +47,8 @@ target_link_libraries(${PROJECT_NAME}
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
 )
+
+
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
@@ -63,12 +65,11 @@ install(TARGETS fix_scan_times
   DESTINATION lib/${PROJECT_NAME})
 
 
-
 ament_python_install_package(${PROJECT_NAME})
-
-
-install(PROGRAMS
-scripts/halo_radar_visualize.py
+# install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS scripts/halo_radar_visualize.py
 DESTINATION lib/${PROJECT_NAME})
+
+ament_export_dependencies(${dependencies})
 
 ament_package()
