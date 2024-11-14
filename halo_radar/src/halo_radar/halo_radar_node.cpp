@@ -60,12 +60,12 @@ using std::placeholders::_1;
 class RosRadar : public halo_radar::Radar, public rclcpp::Node
 {
 public:
-  RosRadar(halo_radar::AddressSet const &addresses)
-    : halo_radar::Radar(addresses), Node("ros_radar_" + addresses.label)
+  RosRadar(halo_radar::AddressSet const &addresses) 
+    : halo_radar::Radar(addresses)
+    , Node("ros_radar_" + addresses.label)
   {
     // Create a separate callback group for subscriptions and timers
-    //Finaly fixed the callback issue.....
-    auto callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    const auto callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
     m_data_pub = this->create_publisher<marine_sensor_msgs::msg::RadarSector>(addresses.label + "/data", 10);
     m_state_pub = this->create_publisher<marine_radar_control_msgs::msg::RadarControlSet>(addresses.label + "/state", 10);
@@ -87,7 +87,7 @@ public:
     // Create a separate executor for the callback group
     m_executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     m_executor->add_callback_group(callback_group, this->get_node_base_interface());
-    m_executor_thread = std::thread([this]() { m_executor->spin(); });
+    m_executor_thread = std::thread(std::bind(&rclcpp::executors::SingleThreadedExecutor::spin, m_executor));
 
     startThreads();
   }

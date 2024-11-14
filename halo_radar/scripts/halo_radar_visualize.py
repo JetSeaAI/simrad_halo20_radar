@@ -3,10 +3,13 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from marine_sensor_msgs.msg import RadarSector
+from marine_radar_control_msgs.msg import RadarControlValue
 from halo_radar.radar_interface import RadarInterface, Sector
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
+from PyQt5 import QtWidgets, QtCore
+import signal
 
 class RadarVisualizeNode(Node):
     def __init__(self):
@@ -17,6 +20,7 @@ class RadarVisualizeNode(Node):
             self.listener_callback,
             10)
         self.image_publisher = self.create_publisher(Image, '/radar_image', 10)
+        self.command_publisher = self.create_publisher(RadarControlValue, '/HaloA/change_state', 10)
         
         self.bridge = CvBridge()
         self.radar_interface = RadarInterface()
@@ -83,13 +87,80 @@ class RadarVisualizeNode(Node):
         self.image.header.stamp = self.get_clock().now().to_msg()
         self.image_publisher.publish(self.image)
 
+class RadarConfigGUI(QtWidgets.QWidget):
+    def __init__(self, radar_node):
+        super().__init__()
+        self.radar_node = radar_node
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Radar Configuration')
+        layout = QtWidgets.QVBoxLayout()
+
+        self.start_button = QtWidgets.QPushButton('Start Radar')
+        self.start_button.clicked.connect(self.start_radar)
+        layout.addWidget(self.start_button)
+
+        self.stop_button = QtWidgets.QPushButton('Stop Radar')
+        self.stop_button.clicked.connect(self.stop_radar)
+        layout.addWidget(self.stop_button)
+
+        self.setLayout(layout)
+
+    def start_radar(self):
+        self.radar_node.get_logger().info('Starting radar...')
+        command = RadarControlValue()
+        command.key = 'status'
+        command.value = 'transmit'
+        self.radar_node.command_publisher.publish(command)
+
+
+    def stop_radar(self):
+        self.radar_node.get_logger().info('Stopping radar...')
+        command = RadarControlValue()
+        command.key = 'status'
+        command.value = 'standby'
+        self.radar_node.command_publisher.publish(command)
+
+    def set_range(self):
+        # TODO: Implement
+        pass
+
+    def set_gain(self):
+        # TODO: Implement
+        pass
+
+    def set_mode(self):
+        # TODO: Implement
+        pass
+
+    
 
 def main(args=None):
     rclpy.init(args=args)
     radar_visualize_node = RadarVisualizeNode()
-    rclpy.spin(radar_visualize_node)
+
+    app = QtWidgets.QApplication([])
+    gui = RadarConfigGUI(radar_visualize_node)
+    gui.show()
+
+
+    def on_exit():
+        rclpy.shutdown()
+
+    app.aboutToQuit.connect(on_exit)
+
+    def handle_sigint(*args):
+        app.quit()
+
+    signal.signal(signal.SIGINT, handle_sigint)
+    
+    while rclpy.ok():
+        app.processEvents()
+        rclpy.spin_once(radar_visualize_node, timeout_sec=0.1)
+    app.exec_()
+
     radar_visualize_node.destroy_node()
-    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
