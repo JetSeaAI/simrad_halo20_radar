@@ -68,7 +68,8 @@ install(TARGETS fix_scan_times
 ament_python_install_package(${PROJECT_NAME})
 # install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/halo_radar_visualize.py
-DESTINATION lib/${PROJECT_NAME})
+  scripts/halo_radar_control_panel.py
+  DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(${dependencies})
 
