@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from marine_radar_control_msgs.msg import RadarControlValue
+from marine_radar_control_msgs.msg import RadarControlValue,RadarControlSet
 from PyQt5 import QtWidgets, QtCore
 import signal
 
@@ -10,6 +10,7 @@ class RadarConfigGUI(QtWidgets.QWidget):
         super().__init__()
         self.radar_node = radar_node
         self.initUI()
+        self.sea_clutter_auto_mode=False
 
     def initUI(self):
         self.setWindowTitle('Radar Configuration')
@@ -27,9 +28,14 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.range_button.clicked.connect(self.set_range)
         layout.addWidget(self.range_button)
 
-        self.gain_button = QtWidgets.QPushButton('Set Gain')
-        self.gain_button.clicked.connect(self.set_gain)
-        layout.addWidget(self.gain_button)
+        self.gain_label = QtWidgets.QLabel('Gain')
+        layout.addWidget(self.gain_label)
+        self.gain_spinbox = QtWidgets.QSpinBox()
+        self.gain_spinbox.setRange(0,100)
+        self.gain_spinbox.setSingleStep(1)
+        self.gain_spinbox.setValue(20)
+        self.gain_spinbox.valueChanged.connect(self.set_gain)
+        layout.addWidget(self.gain_spinbox)
 
         self.mode_label = QtWidgets.QLabel('Mode')
         layout.addWidget(self.mode_label)
@@ -38,11 +44,16 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.mode_combobox.currentIndexChanged.connect(self.set_mode)
         layout.addWidget(self.mode_combobox)
 
-        self.sea_clutter_button = QtWidgets.QPushButton('Set Sea Clutter')
-        self.sea_clutter_button.clicked.connect(self.set_sea_clutter)
-        layout.addWidget(self.sea_clutter_button)
+        self.sea_clutter_label = QtWidgets.QLabel('Sea Clutter')
+        layout.addWidget(self.sea_clutter_label)
+        self.sea_clutter_spinbox = QtWidgets.QSpinBox()
+        self.sea_clutter_spinbox.setRange(0,100)
+        self.sea_clutter_spinbox.setSingleStep(1)
+        self.sea_clutter_spinbox.setValue(0)
+        self.sea_clutter_spinbox.valueChanged.connect(self.set_sea_clutter)
+        layout.addWidget(self.sea_clutter_spinbox)
 
-        self.auto_sea_clutter_nudge_button = QtWidgets.QPushButton('Set Auto Sea Clutter Nudge')
+        self.auto_sea_clutter_nudge_button = QtWidgets.QPushButton('Enable Auto Sea Clutter Nudge')
         self.auto_sea_clutter_nudge_button.clicked.connect(self.set_auto_sea_clutter_nudge)
         layout.addWidget(self.auto_sea_clutter_nudge_button)
 
@@ -142,14 +153,14 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.get_logger().info('Setting range...')
         command = RadarControlValue()
         command.key = 'range'
-        command.value = '50'  # Example value
+        command.value = '50'  
         self.radar_node.command_publisher.publish(command)
 
-    def set_gain(self):
-        self.radar_node.get_logger().info('Setting gain...')
+    def set_gain(self, value):
+        self.radar_node.get_logger().info('Setting gain: %d' % value)
         command = RadarControlValue()
         command.key = 'gain'
-        command.value = '35.686275'  # Example value
+        command.value = str(value+1)  
         self.radar_node.command_publisher.publish(command)
 
     def set_mode(self):
@@ -159,18 +170,34 @@ class RadarConfigGUI(QtWidgets.QWidget):
         command.value = self.mode_combobox.currentText()
         self.radar_node.command_publisher.publish(command)
 
-    def set_sea_clutter(self):
-        self.radar_node.get_logger().info('Setting sea clutter...')
+    def set_sea_clutter(self,value):
         command = RadarControlValue()
-        command.key = 'sea_clutter'
-        command.value = 'auto'  # Example value
+        if self.sea_clutter_auto_mode:
+            self.radar_node.get_logger().info('Setting auto sea clutter offset: %d' % value)
+            command.key = 'auto_sea_clutter_nudge'
+        else:
+            self.radar_node.get_logger().info('Setting sea clutter: %d' % value)
+            command.key = 'sea_clutter'
+        command.value = str(value)  
         self.radar_node.command_publisher.publish(command)
 
     def set_auto_sea_clutter_nudge(self):
-        self.radar_node.get_logger().info('Setting auto sea clutter nudge...')
+        self.sea_clutter_auto_mode = not self.sea_clutter_auto_mode
         command = RadarControlValue()
-        command.key = 'auto_sea_clutter_nudge'
-        command.value = '0'  # Example value
+        command.key = 'sea_clutter' 
+        self.sea_clutter_spinbox.setValue(0)
+        if self.sea_clutter_auto_mode:
+            command.value = 'auto'      
+            self.sea_clutter_label.setText('Auto Sea Clutter Offset')
+            self.sea_clutter_spinbox.setRange(-50,50)
+            self.radar_node.command_publisher.publish(command)
+            command.key = 'auto_sea_clutter_nudge'
+            self.auto_sea_clutter_nudge_button.setText('Disable Auto Sea Clutter Nudge')
+        else:
+            self.sea_clutter_label.setText('Sea Clutter')
+            self.sea_clutter_spinbox.setRange(0,100)
+            self.auto_sea_clutter_nudge_button.setText('Enable Auto Sea Clutter Nudge')
+        command.value = '0'  #reset the value
         self.radar_node.command_publisher.publish(command)
 
     def set_sea_state(self):
@@ -184,7 +211,7 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.get_logger().info('Setting rain clutter...')
         command = RadarControlValue()
         command.key = 'rain_clutter'
-        command.value = '0.784314'  # Example value
+        command.value = '0.784314'  
         self.radar_node.command_publisher.publish(command)
 
     def set_noise_rejection(self):
@@ -233,28 +260,28 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.get_logger().info('Setting doppler speed...')
         command = RadarControlValue()
         command.key = 'doppler_speed'
-        command.value = '2.000000'  # Example value
+        command.value = '2.000000'  
         self.radar_node.command_publisher.publish(command)
 
     def set_antenna_height(self):
         self.radar_node.get_logger().info('Setting antenna height...')
         command = RadarControlValue()
         command.key = 'antenna_height'
-        command.value = '4.000000'  # Example value
+        command.value = '4.000000'  
         self.radar_node.command_publisher.publish(command)
 
     def set_bearing_alignment(self):
         self.radar_node.get_logger().info('Setting bearing alignment...')
         command = RadarControlValue()
         command.key = 'bearing_alignment'
-        command.value = '0.000000'  # Example value
+        command.value = '0.000000'  
         self.radar_node.command_publisher.publish(command)
 
     def set_sidelobe_suppression(self):
         self.radar_node.get_logger().info('Setting sidelobe suppression...')
         command = RadarControlValue()
         command.key = 'sidelobe_suppression'
-        command.value = 'auto'  # Example value
+        command.value = 'auto'  
         self.radar_node.command_publisher.publish(command)
 
     def set_lights(self):
@@ -269,12 +296,15 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.destroy_node()
         event.accept()
         raise SystemExit
-        
+    
+def sync_radar_status(msg):
+    print(msg)        
 
 def main(args=None):
     rclpy.init(args=args)
     radar_node = Node('radar_control_panel')
     radar_node.command_publisher = radar_node.create_publisher(RadarControlValue, '/HaloA/change_state', 10)
+    radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/status',sync_radar_status,10)
     app = QtWidgets.QApplication([])
     gui = RadarConfigGUI(radar_node)
     gui.show()
