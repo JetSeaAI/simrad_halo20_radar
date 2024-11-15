@@ -3,8 +3,7 @@ import rclpy
 from rclpy.node import Node
 from marine_radar_control_msgs.msg import RadarControlValue,RadarControlSet
 from PyQt5 import QtWidgets, QtCore
-import signal
-
+import math
 class RadarConfigGUI(QtWidgets.QWidget):
     def __init__(self, radar_node):
         super().__init__()
@@ -28,11 +27,10 @@ class RadarConfigGUI(QtWidgets.QWidget):
         layout.addWidget(self.range_label)
         self.range_combobox = QtWidgets.QComboBox()
         self.range_values = {
-            '25': 25,
             '50': 50,
             '75': 75,
             '100': 100,
-            '1/8 NM': 231.48,
+            '1/8 NM': 231,
             '1/4 NM': 463,
             '1/2 NM': 926,
             '3/4 NM': 1389,
@@ -87,9 +85,14 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.sea_state_combobox.currentIndexChanged.connect(self.set_sea_state)
         layout.addWidget(self.sea_state_combobox)
 
-        self.rain_clutter_button = QtWidgets.QPushButton('Set Rain Clutter')
-        self.rain_clutter_button.clicked.connect(self.set_rain_clutter)
-        layout.addWidget(self.rain_clutter_button)
+        self.rain_clutter_label = QtWidgets.QLabel('Rain Clutter')
+        layout.addWidget(self.rain_clutter_label)
+        self.rain_clutter_spinbox = QtWidgets.QSpinBox()
+        self.rain_clutter_spinbox.setRange(0, 100)
+        self.rain_clutter_spinbox.setSingleStep(1)
+        self.rain_clutter_spinbox.setValue(0)
+        self.rain_clutter_spinbox.valueChanged.connect(self.set_rain_clutter)
+        layout.addWidget(self.rain_clutter_spinbox)
 
         self.noise_rejection_label = QtWidgets.QLabel('Noise rejection')
         layout.addWidget(self.noise_rejection_label)
@@ -133,21 +136,15 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.doppler_mode_combobox.currentIndexChanged.connect(self.set_doppler_mode)
         layout.addWidget(self.doppler_mode_combobox)
 
-        self.doppler_speed_button = QtWidgets.QPushButton('Set Doppler Speed')
-        self.doppler_speed_button.clicked.connect(self.set_doppler_speed)
-        layout.addWidget(self.doppler_speed_button)
 
-        self.antenna_height_button = QtWidgets.QPushButton('Set Antenna Height')
-        self.antenna_height_button.clicked.connect(self.set_antenna_height)
-        layout.addWidget(self.antenna_height_button)
-
-        self.bearing_alignment_button = QtWidgets.QPushButton('Set Bearing Alignment')
-        self.bearing_alignment_button.clicked.connect(self.set_bearing_alignment)
-        layout.addWidget(self.bearing_alignment_button)
-
-        self.sidelobe_suppression_button = QtWidgets.QPushButton('Set Sidelobe Suppression')
-        self.sidelobe_suppression_button.clicked.connect(self.set_sidelobe_suppression)
-        layout.addWidget(self.sidelobe_suppression_button)
+        self.bearing_alignment_label = QtWidgets.QLabel('Bearing alignment')
+        layout.addWidget(self.bearing_alignment_label)
+        self.bearing_alignment_spinbox = QtWidgets.QDoubleSpinBox()
+        self.bearing_alignment_spinbox.setRange(0.0, 360.0)
+        self.bearing_alignment_spinbox.setSingleStep(1.0)
+        self.bearing_alignment_spinbox.setValue(0.0)#default value  
+        self.bearing_alignment_spinbox.valueChanged.connect(self.set_bearing_alignment)
+        layout.addWidget(self.bearing_alignment_spinbox)
 
         self.lights_label = QtWidgets.QLabel('Halo light')
         layout.addWidget(self.lights_label)
@@ -155,6 +152,45 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.lights_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.lights_combobox.currentIndexChanged.connect(self.set_lights)
         layout.addWidget(self.lights_combobox)
+
+        
+
+        layout.addWidget(QtWidgets.QLabel('Advanced settings'))
+        self.advanced_settings_checkbox = QtWidgets.QCheckBox('Show advanced settings')
+        layout.addWidget(self.advanced_settings_checkbox)
+        self.advanced_settings_checkbox.stateChanged.connect(self.set_advanced_settings)
+        
+        self.antenna_height_label = QtWidgets.QLabel('Antenna height')
+        layout.addWidget(self.antenna_height_label)
+        self.antenna_height_spinbox = QtWidgets.QDoubleSpinBox()
+        self.antenna_height_spinbox.setRange(0, 30)
+        self.antenna_height_spinbox.setSingleStep(1)
+        self.antenna_height_spinbox.setValue(4) #default value 
+        self.antenna_height_spinbox.setEnabled(False) #disabled for safety
+        self.antenna_height_spinbox.valueChanged.connect(self.set_antenna_height)
+        layout.addWidget(self.antenna_height_spinbox)
+
+        self.doppler_speed_label = QtWidgets.QLabel('Doppler Speed threshold')
+        layout.addWidget(self.doppler_speed_label)
+        self.doppler_speed_spinbox = QtWidgets.QDoubleSpinBox()
+        self.doppler_speed_spinbox.setRange(0.05, 15.95)
+        self.doppler_speed_spinbox.setSingleStep(0.05)
+        self.doppler_speed_spinbox.setValue(2.0)
+        self.doppler_speed_spinbox.setEnabled(False)  #unknown effect disable for safety
+        self.doppler_speed_spinbox.valueChanged.connect(self.set_doppler_speed)
+        layout.addWidget(self.doppler_speed_spinbox)
+
+        self.sidelobe_suppression_label = QtWidgets.QLabel('Sidelobe sup.')
+        layout.addWidget(self.sidelobe_suppression_label)
+        self.sidelobe_suppression_spinbox = QtWidgets.QSpinBox()
+        self.sidelobe_suppression_spinbox.setRange(0, 100)
+        self.sidelobe_suppression_spinbox.setSingleStep(1)
+        self.sidelobe_suppression_spinbox.setValue(50)
+        self.sidelobe_suppression_spinbox.setEnabled(False)  #unknown effect disable for safety
+        self.sidelobe_suppression_spinbox.valueChanged.connect(self.set_sidelobe_suppression)
+        layout.addWidget(self.sidelobe_suppression_spinbox)
+
+
 
         self.setLayout(layout)
 
@@ -188,7 +224,7 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.command_publisher.publish(command)
 
     def set_mode(self):
-        self.radar_node.get_logger().info('Setting mode...')
+        self.radar_node.get_logger().info('Setting mode: %s' % self.mode_combobox.currentText())
         command = RadarControlValue()
         command.key = 'mode'
         command.value = self.mode_combobox.currentText()
@@ -225,17 +261,17 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.command_publisher.publish(command)
 
     def set_sea_state(self):
-        self.radar_node.get_logger().info('Setting sea state...')
+        self.radar_node.get_logger().info('Setting sea state: %s' % self.sea_state_combobox.currentText())
         command = RadarControlValue()
         command.key = 'sea_state'
         command.value = self.sea_state_combobox.currentText()
         self.radar_node.command_publisher.publish(command)
 
-    def set_rain_clutter(self):
-        self.radar_node.get_logger().info('Setting rain clutter...')
+    def set_rain_clutter(self, value):
+        self.radar_node.get_logger().info('Setting rain clutter: %d' % value)
         command = RadarControlValue()
         command.key = 'rain_clutter'
-        command.value = '0.784314'  
+        command.value = str(value)  # Convert to float value
         self.radar_node.command_publisher.publish(command)
 
     def set_noise_rejection(self):
@@ -280,32 +316,32 @@ class RadarConfigGUI(QtWidgets.QWidget):
         command.value = self.doppler_mode_combobox.currentText()
         self.radar_node.command_publisher.publish(command)
 
-    def set_doppler_speed(self):
-        self.radar_node.get_logger().info('Setting doppler speed...')
+    def set_doppler_speed(self, value):
+        self.radar_node.get_logger().info('Setting doppler speed: %.2f' % value)
         command = RadarControlValue()
         command.key = 'doppler_speed'
-        command.value = '2.000000'  
+        command.value = str(value)
         self.radar_node.command_publisher.publish(command)
 
-    def set_antenna_height(self):
-        self.radar_node.get_logger().info('Setting antenna height...')
+    def set_antenna_height(self, value):
+        self.radar_node.get_logger().info('Setting antenna height: %.2f' % value)
         command = RadarControlValue()
         command.key = 'antenna_height'
-        command.value = '4.000000'  
+        command.value = str(value)
         self.radar_node.command_publisher.publish(command)
 
-    def set_bearing_alignment(self):
-        self.radar_node.get_logger().info('Setting bearing alignment...')
+    def set_bearing_alignment(self, value):
+        self.radar_node.get_logger().info('Setting bearing alignment: %.2f' % value)
         command = RadarControlValue()
         command.key = 'bearing_alignment'
-        command.value = '0.000000'  
+        command.value = str(value)
         self.radar_node.command_publisher.publish(command)
 
-    def set_sidelobe_suppression(self):
-        self.radar_node.get_logger().info('Setting sidelobe suppression...')
+    def set_sidelobe_suppression(self, value):
+        self.radar_node.get_logger().info('Setting sidelobe suppression: %d' % value)
         command = RadarControlValue()
         command.key = 'sidelobe_suppression'
-        command.value = 'auto'  
+        command.value = str(value)
         self.radar_node.command_publisher.publish(command)
 
     def set_lights(self):
@@ -315,6 +351,11 @@ class RadarConfigGUI(QtWidgets.QWidget):
         command.value = self.lights_combobox.currentText()
         self.radar_node.command_publisher.publish(command)
     
+    def set_advanced_settings(self, enabled):
+        self.antenna_height_spinbox.setEnabled(enabled)
+        self.doppler_speed_spinbox.setEnabled(enabled)
+        self.sidelobe_suppression_spinbox.setEnabled(enabled)
+
     def closeEvent(self, event):
         self.radar_node.get_logger().info('Closed by user')
         self.radar_node.destroy_node()
@@ -322,15 +363,60 @@ class RadarConfigGUI(QtWidgets.QWidget):
         raise SystemExit
     
 def sync_radar_status(msg):
-    print(msg)        
+    gui = RadarConfigGUI.instance
+    update_map = {
+        'range': lambda value: 
+        gui.range_combobox.setCurrentText(list(gui.range_values.keys())
+                                          [list(gui.range_values.values()).index(int(value))])
+                                            if gui.range_values[gui.range_combobox.currentText()] != int(value) 
+                                            else None,
+        'gain': lambda value: gui.gain_spinbox.setValue(math.floor(float(value))) if gui.gain_spinbox.value() != math.floor(float(value)) else None,
+        'mode': lambda value: gui.mode_combobox.setCurrentText(value) if gui.mode_combobox.currentText() != value else None,
+        # 'sea_clutter': lambda value: gui.sea_clutter_spinbox.setValue(int(float(value))) if gui.sea_clutter_spinbox.value() != int(float(value)) else None,
+        # 'auto_sea_clutter_nudge': lambda value: gui.sea_clutter_spinbox.setValue(int(value)) if gui.sea_clutter_spinbox.value() != int(value) else None,
+        'sea_state': lambda value: gui.sea_state_combobox.setCurrentText(value) if gui.sea_state_combobox.currentText() != value else None,
+        'rain_clutter': lambda value: gui.rain_clutter_spinbox.setValue(math.ceil(float(value))) if gui.rain_clutter_spinbox.value() != math.floor(float(value)) else None,
+        'noise_rejection': lambda value: gui.noise_rejection_combobox.setCurrentText(value) if gui.noise_rejection_combobox.currentText() != value else None,
+        'target_expansion': lambda value: gui.target_expansion_combobox.setCurrentText(value) if gui.target_expansion_combobox.currentText() != value else None,
+        'interference_rejection': lambda value: gui.interference_rejection_combobox.setCurrentText(value) if gui.interference_rejection_combobox.currentText() != value else None,
+        'target_separation': lambda value: gui.target_separation_combobox.setCurrentText(value) if gui.target_separation_combobox.currentText() != value else None,
+        'scan_speed': lambda value: gui.scan_speed_combobox.setCurrentText(value) if gui.scan_speed_combobox.currentText() != value else None,
+        'doppler_mode': lambda value: gui.doppler_mode_combobox.setCurrentText(value) if gui.doppler_mode_combobox.currentText() != value else None,
+        'doppler_speed': lambda value: gui.doppler_speed_spinbox.setValue(float(value)) if gui.doppler_speed_spinbox.value() != float(value) else None,
+        'antenna_height': lambda value: gui.antenna_height_spinbox.setValue(float(value)) if gui.antenna_height_spinbox.value() != float(value) else None,
+        'bearing_alignment': lambda value: gui.bearing_alignment_spinbox.setValue(float(value)) if gui.bearing_alignment_spinbox.value() != float(value) else None,
+        # 'sidelobe_suppression': lambda value: gui.sidelobe_suppression_spinbox.setValue(int(value)) if gui.sidelobe_suppression_spinbox.value() != int(value) else None,
+        'lights': lambda value: gui.lights_combobox.setCurrentText(value) if gui.lights_combobox.currentText() != value else None,
+    }
+
+
+    for item in msg.items:
+        if item.name in update_map and item.value is not None:
+            update_map[item.name](item.value)
+
+        if (item.name == 'sea_clutter') :
+            if item.value == 'auto' and not gui.sea_clutter_auto_mode:
+                gui.set_auto_sea_clutter_nudge()
+            elif item.value != 'auto' and math.ceil(float(item.value)) != gui.sea_clutter_spinbox.value():
+                if gui.sea_clutter_auto_mode:
+                    gui.set_auto_sea_clutter_nudge()
+                gui.sea_clutter_spinbox.setValue(math.ceil(float(item.value)))
+                #some value jumpping issue here     
+            
+        
+        if item.name == 'auto_sea_clutter_nudge' and gui.sea_clutter_auto_mode:
+            gui.sea_clutter_spinbox.setValue(int(item.value))
+            gui.sea_clutter_auto_mode = True
 
 def main(args=None):
     rclpy.init(args=args)
     radar_node = Node('radar_control_panel')
     radar_node.command_publisher = radar_node.create_publisher(RadarControlValue, '/HaloA/change_state', 10)
-    radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/status',sync_radar_status,10)
+    radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state', sync_radar_status, 10)
+
     app = QtWidgets.QApplication([])
     gui = RadarConfigGUI(radar_node)
+    RadarConfigGUI.instance = gui
     gui.show()
 
     while 1:

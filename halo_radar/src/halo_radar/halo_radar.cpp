@@ -628,7 +628,6 @@ void Radar::reportThread()
                             }
                             
                             new_state["doppler_speed"] = std::to_string(c408->doppler_speed/100.0);
-                            state_updated = true; //force update
                         }
                         break;
                     }
