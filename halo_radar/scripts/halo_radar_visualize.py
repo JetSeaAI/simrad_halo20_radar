@@ -144,23 +144,29 @@ def main(args=None):
     gui = RadarConfigGUI(radar_visualize_node)
     gui.show()
 
-
     def on_exit():
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
+        radar_visualize_node.destroy_node()
+        app.closeAllWindows()
+        app.quit()
 
     app.aboutToQuit.connect(on_exit)
 
     def handle_sigint(*args):
-        app.quit()
+        on_exit()
 
+ 
     signal.signal(signal.SIGINT, handle_sigint)
     
     while rclpy.ok():
         app.processEvents()
         rclpy.spin_once(radar_visualize_node, timeout_sec=0.1)
-    app.exec_()
 
-    radar_visualize_node.destroy_node()
+    app.exec_()
+    app.closeAllWindows()
+
+    
 
 if __name__ == '__main__':
     main()
