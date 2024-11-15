@@ -24,9 +24,32 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.stop_button.clicked.connect(self.stop_radar)
         layout.addWidget(self.stop_button)
 
-        self.range_button = QtWidgets.QPushButton('Set Range')
-        self.range_button.clicked.connect(self.set_range)
-        layout.addWidget(self.range_button)
+        self.range_label = QtWidgets.QLabel('Set Range')
+        layout.addWidget(self.range_label)
+        self.range_combobox = QtWidgets.QComboBox()
+        self.range_values = {
+            '25': 25,
+            '50': 50,
+            '75': 75,
+            '100': 100,
+            '1/8 NM': 231.48,
+            '1/4 NM': 463,
+            '1/2 NM': 926,
+            '3/4 NM': 1389,
+            '1 NM': 1852,
+            '1.5 NM': 2778,
+            '2 NM': 3704,
+            '3 NM': 5556,
+            '4 NM': 7408,
+            '6 NM': 11112,
+            '8 NM': 14816,
+            '12 NM': 22224,
+            '16 NM': 29632,
+            '24 NM': 44448
+        }
+        self.range_combobox.addItems(self.range_values.keys())
+        self.range_combobox.currentIndexChanged.connect(self.set_range)
+        layout.addWidget(self.range_combobox)
 
         self.gain_label = QtWidgets.QLabel('Gain')
         layout.addWidget(self.gain_label)
@@ -150,10 +173,11 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.command_publisher.publish(command)
 
     def set_range(self):
-        self.radar_node.get_logger().info('Setting range...')
+        value=self.range_values[self.range_combobox.currentText()]
+        self.radar_node.get_logger().info('Setting range: %d'% value)
         command = RadarControlValue()
         command.key = 'range'
-        command.value = '50'  
+        command.value = str(value)
         self.radar_node.command_publisher.publish(command)
 
     def set_gain(self, value):
