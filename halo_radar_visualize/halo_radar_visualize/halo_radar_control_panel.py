@@ -15,6 +15,8 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.setWindowTitle('Radar Configuration')
         layout = QtWidgets.QVBoxLayout()
 
+        self.operation_label = QtWidgets.QLabel('Radar Sratus: Unknown')
+        layout.addWidget(self.operation_label)
         self.start_button = QtWidgets.QPushButton('Start Radar')
         self.start_button.clicked.connect(self.start_radar)
         layout.addWidget(self.start_button)
@@ -28,8 +30,10 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.range_combobox = QtWidgets.QComboBox()
         self.range_values = {
             '50': 50,
+            '1/32':57,
             '75': 75,
             '100': 100,
+            '1/16':115,
             '1/8 NM': 231,
             '1/4 NM': 463,
             '1/2 NM': 926,
@@ -365,6 +369,7 @@ class RadarConfigGUI(QtWidgets.QWidget):
 def sync_radar_status(msg):
     gui = RadarConfigGUI.instance
     update_map = {
+        'status': lambda value: gui.operation_label.setText('Radar Status: ' + value),
         'range': lambda value: 
         gui.range_combobox.setCurrentText(list(gui.range_values.keys())
                                           [list(gui.range_values.values()).index(int(value))])

@@ -11,30 +11,12 @@ class RadarInterface:
     def __init__(self):
         self.angle = 0
 
-    def configureAngles(self, aperture_deg, step_deg, ensure_divisor):
+    def configureAngles(self, aperture_deg, step_deg):
         # to gradians
         target_half_aperture = int(aperture_deg*200/360+0.5)
         best_half_aperture = target_half_aperture
         self.angle_step = self.degrees2grad(step_deg)
 
-        # ensure angle_step is a divisor of max-min in gradians, necessary for LaserScan messages
-        if ensure_divisor:            
-            # look around step, allow increased aperture
-            target_step = self.angle_step
-            
-            # not too far from requested aperture, as close as possible to requested step (impacts turn duration)
-            computeCost = lambda step,half_aperture: 1000 if half_aperture%step != 0 else abs(step-target_step) + abs(half_aperture-target_half_aperture)
-            
-            best_cost = computeCost(self.angle_step, target_half_aperture)
-            if best_cost != 0:                
-                for step in range(1, target_step*2):
-                    for half_aperture in range(target_half_aperture, min(target_half_aperture+10, 200)+1):
-                        cost = computeCost(step, half_aperture)
-                        if cost < best_cost:
-                            best_cost = cost
-                            self.angle_step = step
-                            best_half_aperture = half_aperture
-                        
         self.angle_min = -best_half_aperture
         self.angle_max = best_half_aperture
         if self.angle_max == 200:                
