@@ -152,14 +152,14 @@ std::vector<AddressSet> scan(const std::vector<uint32_t> & addresses)
                     asa.report = b201->addrReportA;
                     asa.interface = a;
                     ret.push_back(asa);
-                    AddressSet asb;
-                    asb.label = "HaloB";
-                    asb.data = b201->addrDataB;
-                    asb.send = b201->addrSendB;
-                    asb.report = b201->addrReportB;
-                    asb.interface = a;
-                    ret.push_back(asb);
-                    break;
+                    // AddressSet asb;
+                    // asb.label = "HaloB";
+                    // asb.data = b201->addrDataB;
+                    // asb.send = b201->addrSendB;
+                    // asb.report = b201->addrReportB;
+                    // asb.interface = a;
+                    // ret.push_back(asb);
+                    // break;
                 }
             }
             count += 1;
@@ -628,7 +628,6 @@ void Radar::reportThread()
                             }
                             
                             new_state["doppler_speed"] = std::to_string(c408->doppler_speed/100.0);
-                            state_updated = true; //force update
                         }
                         break;
                     }

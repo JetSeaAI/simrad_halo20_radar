@@ -5,7 +5,11 @@
 #include "marine_sensor_msgs/msg/radar_sector.hpp"
 #include "marine_radar_control_msgs/msg/radar_control_set.hpp"
 #include "marine_radar_control_msgs/msg/radar_control_value.hpp"
+#include "std_msgs/msg/string.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "rclcpp/callback_group.hpp"
+#include "rmw/qos_profiles.h"
+#include "rclcpp/qos.hpp"
 #include <future>
 #include "angular_speed_estimator.h"
 
@@ -51,26 +55,52 @@
  * - m_frame_id: Frame ID.
  * - m_estimator: Angular speed estimator.
  */
+using std::placeholders::_1;
+
 class RosRadar : public halo_radar::Radar, public rclcpp::Node
 {
 public:
   RosRadar(halo_radar::AddressSet const &addresses) 
-    : halo_radar::Radar(addresses), Node("ros_radar_" + addresses.label)
+    : halo_radar::Radar(addresses)
+    , Node("ros_radar_" + addresses.label)
   {
+    // Create a separate callback group for subscriptions and timers
+    const auto callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
     m_data_pub = this->create_publisher<marine_sensor_msgs::msg::RadarSector>(addresses.label + "/data", 10);
     m_state_pub = this->create_publisher<marine_radar_control_msgs::msg::RadarControlSet>(addresses.label + "/state", 10);
+    
+    rclcpp::SubscriptionOptions options;
+    options.callback_group = callback_group;
+
     m_state_change_sub = this->create_subscription<marine_radar_control_msgs::msg::RadarControlValue>(
-        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this, std::placeholders::_1));
+        addresses.label + "/change_state", 10, std::bind(&RosRadar::stateChangeCallback, this,_1), options);
     m_heartbeat_timer = this->create_wall_timer(
-        std::chrono::seconds(1), std::bind(&RosRadar::hbTimerCallback, this));
+      std::chrono::seconds(1), std::bind(&RosRadar::hbTimerCallback, this),
+      callback_group);
 
     this->declare_parameter<double>("range_correction_factor", m_rangeCorrectionFactor);
     this->declare_parameter<std::string>("frame_id", m_frame_id);
     this->get_parameter("range_correction_factor", m_rangeCorrectionFactor);
     this->get_parameter("frame_id", m_frame_id);
 
+    // Create a separate executor for the callback group
+    m_executor = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    m_executor->add_callback_group(callback_group, this->get_node_base_interface());
+    m_executor_thread = std::thread(std::bind(&rclcpp::executors::SingleThreadedExecutor::spin, m_executor));
+
     startThreads();
   }
+
+  ~RosRadar()
+  {
+    m_executor->cancel();
+    if (m_executor_thread.joinable())
+    {
+      m_executor_thread.join();
+    }
+  }
+
 
 protected:
   void processData(std::vector<halo_radar::Scanline> const &scanlines) override
@@ -110,7 +140,6 @@ protected:
     if (scan_time > 0)
       time_increment = std::abs(rs.angle_increment)/scan_time;
     rs.time_increment =  rclcpp::Duration::from_seconds(time_increment);
-
     m_data_pub->publish(rs);
   }
 
@@ -161,13 +190,20 @@ protected:
 private:
   void stateChangeCallback(const marine_radar_control_msgs::msg::RadarControlValue::SharedPtr cv)
   {
+    RCLCPP_INFO(this->get_logger(), "State change requested: key=%s, value=%s", cv->key.c_str(), cv->value.c_str());
     sendCommand(cv->key, cv->value);
+  }
+  void testCallback(const std_msgs::msg::String::SharedPtr msg)
+  {
+    std::cout << "I heard: '" << msg->data << "'" << std::endl;
+    RCLCPP_INFO(this->get_logger(), "I heard: '%s'", msg->data.c_str());
   }
 
   void hbTimerCallback()
   {
     if (checkHeartbeat())
       stateUpdated();
+    RCLCPP_INFO(this->get_logger(), "Heartbeat");
   }
 
   void createEnumControl(std::string const &name, std::string const &label, std::string const enums[],
@@ -225,11 +261,15 @@ private:
   rclcpp::Publisher<marine_radar_control_msgs::msg::RadarControlSet>::SharedPtr m_state_pub;
   rclcpp::Subscription<marine_radar_control_msgs::msg::RadarControlValue>::SharedPtr m_state_change_sub;
   rclcpp::TimerBase::SharedPtr m_heartbeat_timer;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr m_test_sub;
 
   double m_rangeCorrectionFactor = 1.024;
   std::string m_frame_id = "radar";
 
   AngularSpeedEstimator m_estimator;
+
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> m_executor;
+  std::thread m_executor_thread;
 };
 
 std::shared_ptr<halo_radar::HeadingSender> headingSender;
@@ -250,6 +290,7 @@ void odometryCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
     headingSender->setHeading(heading);
   }
 }
+
 
 int main(int argc, char **argv)
 {
@@ -283,11 +324,12 @@ int main(int argc, char **argv)
       }
     }
   });
+  
+  while (rclcpp::ok())
+  {
+    rclcpp::spin(node);
+  }
 
-  auto odom_sub = node->create_subscription<nav_msgs::msg::Odometry>(
-      "odom", 10, odometryCallback);
-
-  rclcpp::spin(node);
 
   rclcpp::shutdown();
   return 0;
