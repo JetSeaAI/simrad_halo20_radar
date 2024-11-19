@@ -88,6 +88,12 @@ The following parameters can be set in the `halo_radar_control_panel`:
 
 These parameters can be set through the graphical interface of the `halo_radar_control_panel` and will be automatically published to the `/HaloA/change_state` topic.
 
+## GUI for setting parameters
+
+The `halo_radar_control_panel` provides a user-friendly graphical interface for setting radar parameters. This GUI allows users to easily configure and adjust radar settings such as range, gain, sea clutter, and more. Below is an example of the GUI:
+
+![GUI for setting parameters](blob/gui_screenshot.png)
+
 ## Topics
 
 The `halo_radar` node publishes and subscribes to the following topics:

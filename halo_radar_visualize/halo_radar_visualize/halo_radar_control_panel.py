@@ -4,6 +4,9 @@ from rclpy.node import Node
 from marine_radar_control_msgs.msg import RadarControlValue,RadarControlSet
 from PyQt5 import QtWidgets, QtCore
 import math
+import base64
+from PyQt5.QtGui import QPixmap
+
 class RadarConfigGUI(QtWidgets.QWidget):
     def __init__(self, radar_node):
         super().__init__()
@@ -13,20 +16,25 @@ class RadarConfigGUI(QtWidgets.QWidget):
 
     def initUI(self):
         self.setWindowTitle('Radar Configuration')
-        layout = QtWidgets.QVBoxLayout()
+        h_layout = QtWidgets.QHBoxLayout()
+        v_layout_left = QtWidgets.QVBoxLayout()
+        v_layout_left.setAlignment(QtCore.Qt.AlignTop)
+        v_layout_right = QtWidgets.QVBoxLayout()
+        h_layout.addLayout(v_layout_left)
+        h_layout.addLayout(v_layout_right)
 
         self.operation_label = QtWidgets.QLabel('Radar Sratus: Unknown')
-        layout.addWidget(self.operation_label)
+        v_layout_left.addWidget(self.operation_label)
         self.start_button = QtWidgets.QPushButton('Start Radar')
         self.start_button.clicked.connect(self.start_radar)
-        layout.addWidget(self.start_button)
+        v_layout_left.addWidget(self.start_button)
 
         self.stop_button = QtWidgets.QPushButton('Stop Radar')
         self.stop_button.clicked.connect(self.stop_radar)
-        layout.addWidget(self.stop_button)
+        v_layout_left.addWidget(self.stop_button)
 
         self.range_label = QtWidgets.QLabel('Set Range')
-        layout.addWidget(self.range_label)
+        v_layout_left.addWidget(self.range_label)
         self.range_combobox = QtWidgets.QComboBox()
         self.range_values = {
             '50': 50,
@@ -51,152 +59,151 @@ class RadarConfigGUI(QtWidgets.QWidget):
         }
         self.range_combobox.addItems(self.range_values.keys())
         self.range_combobox.currentIndexChanged.connect(self.set_range)
-        layout.addWidget(self.range_combobox)
+        v_layout_left.addWidget(self.range_combobox)
 
         self.gain_label = QtWidgets.QLabel('Gain')
-        layout.addWidget(self.gain_label)
+        v_layout_left.addWidget(self.gain_label)
         self.gain_spinbox = QtWidgets.QSpinBox()
         self.gain_spinbox.setRange(0,100)
         self.gain_spinbox.setSingleStep(1)
         self.gain_spinbox.setValue(20)
         self.gain_spinbox.valueChanged.connect(self.set_gain)
-        layout.addWidget(self.gain_spinbox)
+        v_layout_left.addWidget(self.gain_spinbox)
 
         self.mode_label = QtWidgets.QLabel('Mode')
-        layout.addWidget(self.mode_label)
+        v_layout_left.addWidget(self.mode_label)
         self.mode_combobox = QtWidgets.QComboBox()
         self.mode_combobox.addItems(['custom', 'harbor', 'offshore', 'weather', 'bird'])
         self.mode_combobox.currentIndexChanged.connect(self.set_mode)
-        layout.addWidget(self.mode_combobox)
+        v_layout_left.addWidget(self.mode_combobox)
 
         self.sea_clutter_label = QtWidgets.QLabel('Sea Clutter')
-        layout.addWidget(self.sea_clutter_label)
+        v_layout_left.addWidget(self.sea_clutter_label)
         self.sea_clutter_spinbox = QtWidgets.QSpinBox()
         self.sea_clutter_spinbox.setRange(0,100)
         self.sea_clutter_spinbox.setSingleStep(1)
         self.sea_clutter_spinbox.setValue(0)
         self.sea_clutter_spinbox.valueChanged.connect(self.set_sea_clutter)
-        layout.addWidget(self.sea_clutter_spinbox)
+        v_layout_left.addWidget(self.sea_clutter_spinbox)
 
         self.auto_sea_clutter_nudge_button = QtWidgets.QPushButton('Enable Auto Sea Clutter Nudge')
         self.auto_sea_clutter_nudge_button.clicked.connect(self.set_auto_sea_clutter_nudge)
-        layout.addWidget(self.auto_sea_clutter_nudge_button)
+        v_layout_left.addWidget(self.auto_sea_clutter_nudge_button)
 
         self.sea_state_label = QtWidgets.QLabel('Sea state')
-        layout.addWidget(self.sea_state_label)
+        v_layout_left.addWidget(self.sea_state_label)
         self.sea_state_combobox = QtWidgets.QComboBox()
         self.sea_state_combobox.addItems(['calm', 'moderate', 'rough'])
         self.sea_state_combobox.currentIndexChanged.connect(self.set_sea_state)
-        layout.addWidget(self.sea_state_combobox)
+        v_layout_left.addWidget(self.sea_state_combobox)
 
         self.rain_clutter_label = QtWidgets.QLabel('Rain Clutter')
-        layout.addWidget(self.rain_clutter_label)
+        v_layout_left.addWidget(self.rain_clutter_label)
         self.rain_clutter_spinbox = QtWidgets.QSpinBox()
         self.rain_clutter_spinbox.setRange(0, 100)
         self.rain_clutter_spinbox.setSingleStep(1)
         self.rain_clutter_spinbox.setValue(0)
         self.rain_clutter_spinbox.valueChanged.connect(self.set_rain_clutter)
-        layout.addWidget(self.rain_clutter_spinbox)
+        v_layout_left.addWidget(self.rain_clutter_spinbox)
 
         self.noise_rejection_label = QtWidgets.QLabel('Noise rejection')
-        layout.addWidget(self.noise_rejection_label)
+        v_layout_right.addWidget(self.noise_rejection_label)
         self.noise_rejection_combobox = QtWidgets.QComboBox()
         self.noise_rejection_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.noise_rejection_combobox.currentIndexChanged.connect(self.set_noise_rejection)
-        layout.addWidget(self.noise_rejection_combobox)
+        v_layout_right.addWidget(self.noise_rejection_combobox)
 
         self.target_expansion_label = QtWidgets.QLabel('Target expansion')
-        layout.addWidget(self.target_expansion_label)
+        v_layout_right.addWidget(self.target_expansion_label)
         self.target_expansion_combobox = QtWidgets.QComboBox()
         self.target_expansion_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.target_expansion_combobox.currentIndexChanged.connect(self.set_target_expansion)
-        layout.addWidget(self.target_expansion_combobox)
+        v_layout_right.addWidget(self.target_expansion_combobox)
 
         self.interference_rejection_label = QtWidgets.QLabel('Interf. rej')
-        layout.addWidget(self.interference_rejection_label)
+        v_layout_right.addWidget(self.interference_rejection_label)
         self.interference_rejection_combobox = QtWidgets.QComboBox()
         self.interference_rejection_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.interference_rejection_combobox.currentIndexChanged.connect(self.set_interference_rejection)
-        layout.addWidget(self.interference_rejection_combobox)
+        v_layout_right.addWidget(self.interference_rejection_combobox)
 
         self.target_separation_label = QtWidgets.QLabel('Target separation')
-        layout.addWidget(self.target_separation_label)
+        v_layout_right.addWidget(self.target_separation_label)
         self.target_separation_combobox = QtWidgets.QComboBox()
         self.target_separation_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.target_separation_combobox.currentIndexChanged.connect(self.set_target_separation)
-        layout.addWidget(self.target_separation_combobox)
+        v_layout_right.addWidget(self.target_separation_combobox)
 
         self.scan_speed_label = QtWidgets.QLabel('Fast scan')
-        layout.addWidget(self.scan_speed_label)
+        v_layout_right.addWidget(self.scan_speed_label)
         self.scan_speed_combobox = QtWidgets.QComboBox()
         self.scan_speed_combobox.addItems(['off', 'medium', 'high'])
         self.scan_speed_combobox.currentIndexChanged.connect(self.set_scan_speed)
-        layout.addWidget(self.scan_speed_combobox)
+        v_layout_right.addWidget(self.scan_speed_combobox)
 
         self.doppler_mode_label = QtWidgets.QLabel('VelocityTrack')
-        layout.addWidget(self.doppler_mode_label)
+        v_layout_right.addWidget(self.doppler_mode_label)
         self.doppler_mode_combobox = QtWidgets.QComboBox()
         self.doppler_mode_combobox.addItems(['off', 'normal', 'approaching_only'])
         self.doppler_mode_combobox.currentIndexChanged.connect(self.set_doppler_mode)
-        layout.addWidget(self.doppler_mode_combobox)
+        v_layout_right.addWidget(self.doppler_mode_combobox)
 
 
         self.bearing_alignment_label = QtWidgets.QLabel('Bearing alignment')
-        layout.addWidget(self.bearing_alignment_label)
+        v_layout_right.addWidget(self.bearing_alignment_label)
         self.bearing_alignment_spinbox = QtWidgets.QDoubleSpinBox()
         self.bearing_alignment_spinbox.setRange(0.0, 360.0)
         self.bearing_alignment_spinbox.setSingleStep(1.0)
         self.bearing_alignment_spinbox.setValue(0.0)#default value  
         self.bearing_alignment_spinbox.valueChanged.connect(self.set_bearing_alignment)
-        layout.addWidget(self.bearing_alignment_spinbox)
+        v_layout_right.addWidget(self.bearing_alignment_spinbox)
 
         self.lights_label = QtWidgets.QLabel('Halo light')
-        layout.addWidget(self.lights_label)
+        v_layout_right.addWidget(self.lights_label)
         self.lights_combobox = QtWidgets.QComboBox()
         self.lights_combobox.addItems(['off', 'low', 'medium', 'high'])
         self.lights_combobox.currentIndexChanged.connect(self.set_lights)
-        layout.addWidget(self.lights_combobox)
+        v_layout_right.addWidget(self.lights_combobox)
 
-        
 
-        layout.addWidget(QtWidgets.QLabel('Advanced settings'))
+        v_layout_right.addWidget(QtWidgets.QLabel('Advanced settings'))
         self.advanced_settings_checkbox = QtWidgets.QCheckBox('Show advanced settings')
-        layout.addWidget(self.advanced_settings_checkbox)
+        v_layout_right.addWidget(self.advanced_settings_checkbox)
         self.advanced_settings_checkbox.stateChanged.connect(self.set_advanced_settings)
         
         self.antenna_height_label = QtWidgets.QLabel('Antenna height')
-        layout.addWidget(self.antenna_height_label)
+        v_layout_right.addWidget(self.antenna_height_label)
         self.antenna_height_spinbox = QtWidgets.QDoubleSpinBox()
         self.antenna_height_spinbox.setRange(0, 30)
         self.antenna_height_spinbox.setSingleStep(1)
         self.antenna_height_spinbox.setValue(4) #default value 
         self.antenna_height_spinbox.setEnabled(False) #disabled for safety
         self.antenna_height_spinbox.valueChanged.connect(self.set_antenna_height)
-        layout.addWidget(self.antenna_height_spinbox)
+        v_layout_right.addWidget(self.antenna_height_spinbox)
 
         self.doppler_speed_label = QtWidgets.QLabel('Doppler Speed threshold')
-        layout.addWidget(self.doppler_speed_label)
+        v_layout_right.addWidget(self.doppler_speed_label)
         self.doppler_speed_spinbox = QtWidgets.QDoubleSpinBox()
         self.doppler_speed_spinbox.setRange(0.05, 15.95)
         self.doppler_speed_spinbox.setSingleStep(0.05)
         self.doppler_speed_spinbox.setValue(2.0)
         self.doppler_speed_spinbox.setEnabled(False)  #unknown effect disable for safety
         self.doppler_speed_spinbox.valueChanged.connect(self.set_doppler_speed)
-        layout.addWidget(self.doppler_speed_spinbox)
+        v_layout_right.addWidget(self.doppler_speed_spinbox)
 
         self.sidelobe_suppression_label = QtWidgets.QLabel('Sidelobe sup.')
-        layout.addWidget(self.sidelobe_suppression_label)
+        v_layout_right.addWidget(self.sidelobe_suppression_label)
         self.sidelobe_suppression_spinbox = QtWidgets.QSpinBox()
         self.sidelobe_suppression_spinbox.setRange(0, 100)
         self.sidelobe_suppression_spinbox.setSingleStep(1)
         self.sidelobe_suppression_spinbox.setValue(50)
         self.sidelobe_suppression_spinbox.setEnabled(False)  #unknown effect disable for safety
         self.sidelobe_suppression_spinbox.valueChanged.connect(self.set_sidelobe_suppression)
-        layout.addWidget(self.sidelobe_suppression_spinbox)
+        v_layout_right.addWidget(self.sidelobe_suppression_spinbox)
 
 
 
-        self.setLayout(layout)
+        self.setLayout(h_layout)
 
     def start_radar(self):
         self.radar_node.get_logger().info('Starting radar...')
@@ -412,6 +419,7 @@ def sync_radar_status(msg):
         if item.name == 'auto_sea_clutter_nudge' and gui.sea_clutter_auto_mode:
             gui.sea_clutter_spinbox.setValue(int(item.value))
             gui.sea_clutter_auto_mode = True
+
 
 def main(args=None):
     rclpy.init(args=args)
