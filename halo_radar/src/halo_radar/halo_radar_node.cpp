@@ -62,7 +62,7 @@ class RosRadar : public halo_radar::Radar, public rclcpp::Node
 public:
   RosRadar(halo_radar::AddressSet const &addresses) 
     : halo_radar::Radar(addresses)
-    , Node("ros_radar_" + addresses.label)
+    , Node("halo_radar_" + addresses.label)
   {
     // Create a separate callback group for subscriptions and timers
     const auto callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -295,7 +295,7 @@ void odometryCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("halo_radar");
+  auto node = std::make_shared<rclcpp::Node>("halo_radar_main_node"); // Changed node name to be unique
   std::vector<std::shared_ptr<RosRadar>> radars;
   std::vector<uint32_t> hostIPs;
   if (node->has_parameter("hostIPs"))
@@ -329,7 +329,6 @@ int main(int argc, char **argv)
   {
     rclcpp::spin(node);
   }
-
 
   rclcpp::shutdown();
   return 0;
