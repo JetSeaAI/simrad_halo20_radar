@@ -52,8 +52,11 @@ class RadarVisualizeNode(Node):
         # Configure sector
         self.sector.configure(echo_length, 1024 // 2)
 
+        self.publish_count = 0
+        self.timer = self.create_timer(5.0, self.report_publish_rate)
+
     def radar_echo_data_callback(self, msg):
-        start_time = time.time() # For performance testing
+        # start_time = time.time() # For performance testing
         # Process RadarSector message and convert to image
         angle_start = msg.angle_start
         angle_increment = msg.angle_increment
@@ -77,8 +80,9 @@ class RadarVisualizeNode(Node):
         self.previous_angle = angle
         # self.publishImage()
         self.publishPointCloud(points)
-        end_time = time.time()
-        self.get_logger().info(f"radar_echo_data_callback took {end_time - start_time:.4f} seconds")
+        self.publish_count += 1
+        # end_time = time.time()
+        # self.get_logger().info(f"radar_echo_data_callback took {end_time - start_time:.4f} seconds")
 
     def refreshImage(self, angle, intensities_echoes):
         self.radar_interface.updateAngle(self.radar_interface.rad2grad(angle))
@@ -105,6 +109,11 @@ class RadarVisualizeNode(Node):
         intensities_echoes = np.array(intensities_echoes)
         valid_indices = np.where(intensities_echoes > 0)[0]
         r = range_min + valid_indices * (range_max - range_min) / len(intensities_echoes)
+        
+        # Filter out points less than 3m that relfects the radar it self
+        valid_indices = valid_indices[r >= 3]
+        r = r[r >= 3]
+        
         x = r * np.cos(angle)
         y = r * np.sin(angle)
         z = np.zeros_like(x)
@@ -126,6 +135,10 @@ class RadarVisualizeNode(Node):
         
         # end_time = time.time()
         # self.get_logger().info(f"publishPointCloud took {end_time - start_time:.4f} seconds")
+
+    def report_publish_rate(self):
+        self.get_logger().info(f"Publishing rate: {self.publish_count/5} pointclouds per second")
+        self.publish_count = 0
 
 def main(args=None):
     rclpy.init(args=args)
