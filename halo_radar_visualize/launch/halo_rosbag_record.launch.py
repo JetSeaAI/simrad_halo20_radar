@@ -13,7 +13,7 @@ def generate_launch_description():
     ]
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    bag_name = f'recorded_rosbag_{timestamp}'
+    bag_name = f'recorded_rosbag_halo_{timestamp}'
     
     return launch.LaunchDescription([
         launch.actions.ExecuteProcess(
