@@ -11,11 +11,10 @@ import sys
 import os
 
 class RadarConfigGUI(QtWidgets.QWidget):
-    def __init__(self, radar_node,non_gui_mode):
+    def __init__(self, radar_node):
         super().__init__()
         self.radar_node = radar_node
-        if not non_gui_mode:
-            self.initUI()
+        self.initUI()
         self.sea_clutter_auto_mode=False
 
     def initUI(self):
@@ -376,7 +375,26 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.destroy_node()
         event.accept()
         raise SystemExit
-    
+ 
+def non_GUI_start_radar():
+        command = RadarControlValue()
+        command.key = 'status'
+        command.value = 'transmit'
+        return command
+   
+
+def non_GUI_check_radar_status(msg, radar_node):
+    for item in msg.items:
+        if item.name == 'status' and item.value is not None:
+            if item.value == 'transmit':
+                radar_node.get_logger().info('Radar Status: Transmit')
+            elif item.value == 'standby':
+                radar_node.get_logger().info('Radar Status: Standby')
+                radar_node.get_logger().info('Trying to auto start radar...')
+                radar_node.command_publisher.publish(non_GUI_start_radar())
+
+
+
 def sync_radar_status(msg):
     gui = RadarConfigGUI.instance
     update_map = {
@@ -437,17 +455,15 @@ def main(args=None):
         app = QApplication(sys.argv)
         radar_node.get_logger().info('GUI environment detected.')
         radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state', sync_radar_status, 10)
-
+        gui = RadarConfigGUI(radar_node)
+        RadarConfigGUI.instance = gui
+        radar_node.get_logger().info('GUI mode started')
+        gui.show()
     else:
         radar_node.get_logger().info('No DISPLAY environment variable found. Using non-GUI mode')
         non_GUI_mode = True
-
-    gui = RadarConfigGUI(radar_node,non_GUI_mode)
-    RadarConfigGUI.instance = gui
-    
-    if not non_GUI_mode:
-        gui.show()
-    else:
+        radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state',
+                                                                         lambda msg: non_GUI_check_radar_status(msg, radar_node), 10)
         radar_node.get_logger().info('Non-GUI mode started')
 
     while 1:
