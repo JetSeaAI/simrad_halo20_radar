@@ -60,10 +60,16 @@ The `halo_radar_visualize` package includes a launch file `halo_radar_bringup.la
 ros2 launch halo_radar_visualize halo_radar_bringup.launch.py
 ```
 
-The `halo_radar_visualize` package also provides a launch file `rosbag_record.launch.py` which can be used to record messages from simrad_halo20_radar packages.
+The `halo_radar_visualize` package also provides a launch file `halo_rosbag_record.launch.py` which can be used to record messages from simrad_halo20_radar packages.
 
 ```bash
-ros2 launch halo_radar_visualize rosbag_record.launch.py
+ros2 launch halo_radar_visualize halo_rosbag_record.launch.py
+```
+
+The `halo_radar_visualize` package also provides a launch file `halo_rviz_visualize.launch` which can be used to visualize data from the visualize node in rviz2.
+
+```bash
+ros2 launch halo_radar_visualize halo_rviz_visualize.launch
 ```
 
 ## Parameters
