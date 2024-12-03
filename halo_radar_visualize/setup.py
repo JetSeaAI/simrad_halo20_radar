@@ -4,7 +4,8 @@ from Cython.Build import cythonize
 from glob import glob
 
 package_name = 'halo_radar_visualize'
-files = [package_name + "/halo_radar_visualize.py", package_name + "/radar_interface.py"]
+files = [package_name + "/halo_radar_visualize.py", package_name + "/radar_interface.py",
+          package_name + "/halo_radar_data_cropper.py"]
 
 setup(
     ext_modules=cythonize(files, compiler_directives={'language_level': "3"}, force=True, quiet=True),
@@ -29,6 +30,7 @@ setup(
         'console_scripts': [
             'halo_radar_visualize = halo_radar_visualize.halo_radar_visualize:main',
             'halo_radar_control_panel = halo_radar_visualize.halo_radar_control_panel:main',
+            'halo_radar_data_cropper = halo_radar_visualize.halo_radar_data_cropper:main',
         ],
     },
 )
