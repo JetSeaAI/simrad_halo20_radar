@@ -28,12 +28,21 @@ class HaloRadarDataCropper(Node):
         y = points['y']
         z = points['z']
         distances = np.sqrt(x**2 + y**2 + z**2)
-        mask = (distances >= 50) & (distances <= 200)
-        cropped_points = points[mask]
+        angles = np.degrees(np.arctan2(y, x))
+
+        # Filter points within the angle range of -120 degrees to 120 degrees
+        angle_mask = (angles >= -120) & (angles <= 120)
+        points = points[angle_mask]
+        distances = distances[angle_mask]
+
+        # Filter points within the distance range of 20 meters to 120 meters
+        distance_mask = (distances >= 20) & (distances <= 120)
+        points = points[distance_mask]
+
         header = msg.header
-        cropped_pointcloud = pc2.create_cloud(header, msg.fields, cropped_points)
+        cropped_pointcloud = pc2.create_cloud(header, msg.fields, points)
         self.publisher.publish(cropped_pointcloud)
-\
+
 
 def main(args=None):
     rclpy.init(args=args)
