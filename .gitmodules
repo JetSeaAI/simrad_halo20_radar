@@ -4,3 +4,6 @@
 [submodule "marine_radar_control_msgs"]
 	path = marine_radar_control_msgs
 	url = git@github.com:JetSeaAI/marine_radar_control_msgs.git
+[submodule "pointcloud_to_laserscan"]
+	path = pointcloud_to_laserscan
+	url = git@github.com:JetSeaAI/pointcloud_to_laserscan.git

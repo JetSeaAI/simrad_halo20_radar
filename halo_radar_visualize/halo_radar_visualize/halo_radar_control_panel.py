@@ -6,6 +6,9 @@ from PyQt5 import QtWidgets, QtCore
 import math
 import base64
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QApplication
+import sys
+import os
 
 class RadarConfigGUI(QtWidgets.QWidget):
     def __init__(self, radar_node):
@@ -372,7 +375,26 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node.destroy_node()
         event.accept()
         raise SystemExit
-    
+ 
+def non_GUI_start_radar():
+        command = RadarControlValue()
+        command.key = 'status'
+        command.value = 'transmit'
+        return command
+   
+
+def non_GUI_check_radar_status(msg, radar_node):
+    for item in msg.items:
+        if item.name == 'status' and item.value is not None:
+            if item.value == 'transmit':
+                radar_node.get_logger().info('Radar Status: Transmit')
+            elif item.value == 'standby':
+                radar_node.get_logger().info('Radar Status: Standby')
+                radar_node.get_logger().info('Trying to auto start radar...')
+                radar_node.command_publisher.publish(non_GUI_start_radar())
+
+
+
 def sync_radar_status(msg):
     gui = RadarConfigGUI.instance
     update_map = {
@@ -420,26 +442,41 @@ def sync_radar_status(msg):
             gui.sea_clutter_spinbox.setValue(int(item.value))
             gui.sea_clutter_auto_mode = True
 
+def gui_can_be_shown():
+    return not os.getenv("DISPLAY") is None
 
 def main(args=None):
     rclpy.init(args=args)
     radar_node = Node('radar_control_panel')
     radar_node.command_publisher = radar_node.create_publisher(RadarControlValue, '/HaloA/change_state', 10)
-    radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state', sync_radar_status, 10)
+    non_GUI_mode = False
 
-    app = QtWidgets.QApplication([])
-    gui = RadarConfigGUI(radar_node)
-    RadarConfigGUI.instance = gui
-    gui.show()
+    if gui_can_be_shown():
+        app = QApplication(sys.argv)
+        radar_node.get_logger().info('GUI environment detected.')
+        radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state', sync_radar_status, 10)
+        gui = RadarConfigGUI(radar_node)
+        RadarConfigGUI.instance = gui
+        radar_node.get_logger().info('GUI mode started')
+        gui.show()
+    else:
+        radar_node.get_logger().info('No DISPLAY environment variable found. Using non-GUI mode')
+        non_GUI_mode = True
+        radar_node.status_subscription = radar_node.create_subscription(RadarControlSet, '/HaloA/state',
+                                                                         lambda msg: non_GUI_check_radar_status(msg, radar_node), 10)
+        radar_node.get_logger().info('Non-GUI mode started')
 
     while 1:
         try:
-            app.processEvents()
+            if not non_GUI_mode:
+                app.processEvents()
             rclpy.spin_once(radar_node, timeout_sec=0.1)
         except SystemExit:
             rclpy.get_logger().info('Closed by user')
 
-    app.closeAllWindows()
+    if not non_GUI_mode:
+            app.closeAllWindows()
+            
     radar_node.destroy_node()
     rclpy.shutdown()
 
