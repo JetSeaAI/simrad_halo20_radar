@@ -2,9 +2,18 @@ from launch import LaunchDescription
 from launch.actions import ExecuteProcess
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
+import time
 
 def generate_launch_description():
+
+    topics_to_record = [
+        '/halo_radar/cropped_pointcloud',
+        '/halo_radar/cropped_scan',
+        # '/radar_pointcloud',
+    ]
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    bag_name = f'processed_rosbag_halo_{timestamp}'
+
     return LaunchDescription([
         ExecuteProcess(
             cmd=['ros2', 'bag', 'play', LaunchConfiguration('bag_file')],
@@ -12,8 +21,8 @@ def generate_launch_description():
         ),
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-            remappings=[('cloud_in', '/radar/cropped_pointcloud'),
-                        ('scan', '/radar/cropped_scan')],
+            remappings=[('cloud_in', '/halo_radar/cropped_pointcloud'),
+                        ('scan', '/halo_radar/cropped_scan')],
             parameters=[{
                 'target_frame': 'radar',
                 'transform_tolerance': 0.01,
@@ -34,6 +43,10 @@ def generate_launch_description():
             package='halo_radar_visualize',
             executable='halo_radar_data_cropper',
             name='halo_radar_data_cropper',
+            output='screen'
+        ),
+        ExecuteProcess(
+            cmd=['ros2', 'bag', 'record'] + topics_to_record + ['-o', f'./share/rosbag_record/{bag_name}'],
             output='screen'
         ),
         # Node(

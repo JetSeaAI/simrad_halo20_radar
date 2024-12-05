@@ -13,7 +13,7 @@ class HaloRadarDataCropper(Node):
             '/radar_pointcloud',
             self.listener_callback,
             10)
-        self.publisher = self.create_publisher(PointCloud2, '/radar/cropped_pointcloud', 10)
+        self.publisher = self.create_publisher(PointCloud2, '/halo_radar/cropped_pointcloud', 10)
         self.full_stack_pointcloud = []
 
     def listener_callback(self, msg):
@@ -25,7 +25,7 @@ class HaloRadarDataCropper(Node):
         self.full_stack_pointcloud.append(points)
         x = points['x']
         y = points['y']
-        z = points['z']
+        # z = points['z']
         angles = np.degrees(np.arctan2(y, x))
         # Publish the full stacked point cloud data when the angle reaches -180 degrees
         if np.any(angles == -180):
