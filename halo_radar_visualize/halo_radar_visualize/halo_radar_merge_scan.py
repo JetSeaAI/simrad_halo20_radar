@@ -11,7 +11,7 @@ class RadarMergeScan(Node):
             '/radar/cropped_scan',
             self.listener_callback,
             qos_profile)
-        self.publisher = self.create_publisher(LaserScan, '/radar/merged_scan', 10)
+        self.publisher = self.create_publisher(LaserScan, 'merged_scan', 10)
         self.scan_data = []
         self.total_angle = 0.0
 

@@ -10,10 +10,10 @@ class HaloRadarDataCropper(Node):
         super().__init__('halo_radar_data_cropper')
         self.subscription = self.create_subscription(
             PointCloud2,
-            '/radar_pointcloud',
+            'radar_pointcloud',
             self.listener_callback,
             10)
-        self.publisher = self.create_publisher(PointCloud2, '/halo_radar/cropped_pointcloud', 10)
+        self.publisher = self.create_publisher(PointCloud2, 'cropped_pointcloud', 10)
         self.full_stack_pointcloud = []
 
     def listener_callback(self, msg):
