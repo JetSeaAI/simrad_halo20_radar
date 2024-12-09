@@ -18,7 +18,10 @@ def generate_launch_description():
     
     return launch.LaunchDescription([
         launch.actions.ExecuteProcess(
-            cmd=['ros2', 'bag', 'record'] + topics_to_record + ['-o', f'./share/rosbag_record/{bag_name}'],
+            cmd=['ros2', 'bag', 'record'] +
+            ['-d','900']+ # 15 minutes
+              topics_to_record +
+                ['-o', f'./share/rosbag_record/{bag_name}'],
             output='screen'
         )
     ])
