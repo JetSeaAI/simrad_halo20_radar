@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
 from marine_sensor_msgs.msg import RadarSector
 import numpy as np
 from sensor_msgs.msg import PointCloud2, PointField
@@ -21,7 +20,7 @@ class RadarVisualizeNode(Node):
         self.angle_increment = None
         self.offset = 2 * np.pi
         self.previous_angle = 0.0
-        self.pointcloud_publisher = self.create_publisher(PointCloud2, 'radar_pointcloud', 10)
+        self.pointcloud_publisher = self.create_publisher(PointCloud2, 'single_shot_radar_pointcloud', 10)
 
         # Initialize static fields for PointCloud2 message
         self.pointcloud = PointCloud2()
@@ -45,15 +44,11 @@ class RadarVisualizeNode(Node):
         # Process RadarSector message and convert to image
         angle_start = msg.angle_start
         angle_increment = msg.angle_increment
-        if self.angle_increment != angle_increment:
-            self.radar_interface.configureAngles(360, angle_increment)
-            self.angle_increment = angle_increment
         range_min = msg.range_min
         range_max = msg.range_max
         intensities = msg.intensities
         points = []
         angle_start -= self.offset
-
         if angle_start - self.previous_angle > 0.001 and not angle_start < 0.05:
             self.get_logger().warn(f"Angle Jump Detected. angle_start: {angle_start}, previous_angle: {self.previous_angle}")
         # Convert radar data to image and generate point cloud

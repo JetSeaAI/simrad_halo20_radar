@@ -7,7 +7,8 @@ def generate_launch_description():
         '/HaloA/data',
         '/HaloA/state',
         '/parameter_events',
-        '/halo_radar/radar_pointcloud',
+        '/halo_radar/single_shot_radar_pointcloud',
+        '/halo_radar/merged_pointcloud',
         '/halo_radar/cropped_pointcloud',
         '/halo_radar/cropped_scan',
         '/rosout'
