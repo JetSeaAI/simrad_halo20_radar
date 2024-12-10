@@ -72,8 +72,8 @@ class RadarVisualizeNode(Node):
         r = range_min + valid_indices * (range_max - range_min) / len(intensities_echoes)
         
         # Filter out points less than 3m that relfects the radar it self
-        valid_indices = valid_indices[r >= 3]
-        r = r[r >= 3]
+        # valid_indices = valid_indices[r >= 3]
+        # r = r[r >= 3]
         
         x = r * np.cos(angle)
         y = r * np.sin(angle)
