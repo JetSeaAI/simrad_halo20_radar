@@ -6,25 +6,40 @@ import numpy as np
 from sensor_msgs.msg import PointCloud2, PointField
 
 
-
 class RadarVisualizeNode(Node):
     def __init__(self):
         super().__init__('radar_visualize_node')
-        self.subscription = self.create_subscription(
-            RadarSector,
-            '/HaloA/data',
-            self.radar_echo_data_callback,
-            10)
 
         self.timer = None
         self.angle_increment = None
         self.offset = 2 * np.pi
         self.previous_angle = 0.0
-        self.pointcloud_publisher = self.create_publisher(PointCloud2, 'single_shot_radar_pointcloud', 10)
+
+        parameters = {
+            'single_shot_pointcloud_topic': 'single_shot_radar_pointcloud',
+            'radar_input_topic': '/HaloA/data',
+            'frame_id': 'radar',
+        }
+
+        for name, value in parameters.items():
+            self.declare_parameter(name, value)
+
+        self.pointcloud_publisher = self.create_publisher(
+            PointCloud2,
+            self.get_parameter("single_shot_pointcloud_topic").value,
+            10
+        )
+
+        self.subscription = self.create_subscription(
+            RadarSector,
+            self.get_parameter('radar_input_topic').value,
+            self.radar_echo_data_callback,
+            10
+        )
 
         # Initialize static fields for PointCloud2 message
         self.pointcloud = PointCloud2()
-        self.pointcloud.header.frame_id = 'radar'
+        self.pointcloud.header.frame_id = self.get_parameter('frame_id').value
         self.pointcloud.height = 1
         self.pointcloud.fields = [
             PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
@@ -35,7 +50,7 @@ class RadarVisualizeNode(Node):
         self.pointcloud.is_bigendian = False
         self.pointcloud.point_step = 16
         self.pointcloud.is_dense = True
-      
+
         self.publish_count = 0
         self.timer = self.create_timer(5.0, self.report_publish_rate)
 
@@ -56,7 +71,7 @@ class RadarVisualizeNode(Node):
             angle = angle_start + i * angle_increment
             # self.refreshImage(angle, intensitie.echoes)
             points.extend(self.generate_points(angle, intensitie.echoes, range_min, range_max))
-        
+
         self.previous_angle = angle
         # self.publishImage()
         self.publishPointCloud(points)
@@ -64,27 +79,26 @@ class RadarVisualizeNode(Node):
         # end_time = time.time()
         # self.get_logger().info(f"radar_echo_data_callback took {end_time - start_time:.4f} seconds")
 
-
     def generate_points(self, angle, intensities_echoes, range_min, range_max):
         points = []
         intensities_echoes = np.array(intensities_echoes)
         valid_indices = np.where(intensities_echoes > 0)[0]
         r = range_min + valid_indices * (range_max - range_min) / len(intensities_echoes)
-        
+
         # Filter out points less than 3m that relfects the radar it self
         # valid_indices = valid_indices[r >= 3]
         # r = r[r >= 3]
-        
+
         x = r * np.cos(angle)
         y = r * np.sin(angle)
         z = np.zeros_like(x)
         intensities = intensities_echoes[valid_indices]
         points = np.column_stack((x, y, z, intensities)).tolist()
         return points
-   
+
     def publishPointCloud(self, points):
         # start_time = time.time()
-        
+
         self.pointcloud.header.stamp = self.get_clock().now().to_msg()
         self.pointcloud.width = len(points)
 
@@ -93,7 +107,7 @@ class RadarVisualizeNode(Node):
         self.pointcloud.data = points_array.tobytes()
 
         self.pointcloud_publisher.publish(self.pointcloud)
-        
+
         # end_time = time.time()
         # self.get_logger().info(f"publishPointCloud took {end_time - start_time:.4f} seconds")
 

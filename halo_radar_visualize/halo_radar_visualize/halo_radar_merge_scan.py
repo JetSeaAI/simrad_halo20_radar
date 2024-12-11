@@ -9,18 +9,34 @@ import sensor_msgs_py.point_cloud2 as pc2
 class HaloRadarMergeScan(Node):
     def __init__(self):
         super().__init__('halo_radar_merge_scan')
-        self.subscription = self.create_subscription(
+
+
+        parameters = {
+            'single_shot_pointcloud_topic': 'single_shot_radar_pointcloud',
+            'radar_input_topic': '/HaloA/data',
+            'merged_pointcloud_topic': 'merged_pointcloud'
+        }
+
+        for name, value in parameters.items():
+            self.declare_parameter(name, value)
+
+        self.pointcloud_subscription = self.create_subscription(
             PointCloud2,
-            'single_shot_radar_pointcloud',
+            self.get_parameter("single_shot_pointcloud_topic").value,
             self.listener_callback,
             10)
+        
         self.halo_subscription = self.create_subscription(
             RadarSector,
-            '/HaloA/data',
+            self.get_parameter('radar_input_topic').value,
             self.radar_data_callback,
             10)
             
-        self.publisher = self.create_publisher(PointCloud2, 'merged_pointcloud', 10)
+        self.pointcloud_publisher = self.create_publisher(
+            PointCloud2,
+            self.get_parameter("merged_pointcloud_topic").value,
+            10)
+        
         self.full_stack_pointcloud = []
         self.previous_angle=0
         self.publish_merged_pointcloud = False
@@ -47,7 +63,7 @@ class HaloRadarMergeScan(Node):
             full_pointcloud = np.concatenate(self.full_stack_pointcloud, axis=0)
             header = msg.header
             full_pointcloud_msg = pc2.create_cloud(header, msg.fields, full_pointcloud)
-            self.publisher.publish(full_pointcloud_msg)
+            self.pointcloud_publisher.publish(full_pointcloud_msg)
             self.full_stack_pointcloud = []  # Clear the data for the next stack
 
 def main(args=None):
