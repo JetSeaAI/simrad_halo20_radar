@@ -61,10 +61,10 @@ def generate_launch_description():
         Node(
             package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
             namespace='halo_radar',
-            remappings=[('cloud_in', 'merged_pointcloud'),
+            remappings=[('cloud_in', 'cropped_pointcloud'),
                         ('scan', 'cropped_scan')],
             parameters=[{
-                'target_frame': 'radar',
+                # 'target_frame': 'radar',
                 'transform_tolerance': 0.01,
                 'min_height': 0.0,
                 'max_height': 1.0,
