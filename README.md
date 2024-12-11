@@ -38,7 +38,7 @@ The 'halo_radar' package provides a C++ node. This node handles the communicatio
 ros2 run halo_radar halo_radar
 ```
 
-The 'halo_radar_visualize' package provides two python node.
+The 'halo_radar_visualize' package provides several python node.
 
 - `halo_radar_control_panel`: Provides a QT-GUI for configuring the radar and starting/stopping the radar.
 
@@ -46,15 +46,28 @@ The 'halo_radar_visualize' package provides two python node.
 ros2 run halo_radar_visualize halo_radar_control_panel
 ```
 
-- `halo_radar_visualize`: This node uses the radar message data from `halo_radar` to generate the point cloud for visualization.
+- `halo_radar_visualize`: This node uses the radar message data from `halo_radar` to generate the single-shot pointcloud for visualization.
 
 ```bash
 ros2 run halo_radar_visualize halo_radar_visualize
 ```
 
+- `halo_radar_merge_scan`: This node uses the pointcloud message data from `halo_radar_visualize` to generate the merged pointcloud.
+
+```bash
+ros2 run halo_radar_visualize halo_radar_merge_scan
+```
+
+- `halo_radar_data_cropper`: This node uses the pointcloud message data from `halo_radar_merge_scan` to crop into a smaller area.
+
+```bash
+ros2 run halo_radar_visualize halo_radar_data_cropper
+
+```
+
 ## Launch File
 
-The `halo_radar_visualize` package includes a launch file `halo_radar_bringup.launch.py` which can be used to start the radar node, control panel and visualize node.
+The `halo_radar_visualize` package includes a launch file `halo_radar_bringup.launch.py` which can be used to start the radar node, control panel, visualize node, and all pointcloud process nodes.
 
 ```bash
 ros2 launch halo_radar_visualize halo_radar_bringup.launch.py
