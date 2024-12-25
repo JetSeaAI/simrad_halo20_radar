@@ -16,6 +16,7 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.radar_node = radar_node
         self.initUI()
         self.sea_clutter_auto_mode=False
+        self.gain_auto_mode=False
 
     def initUI(self):
         self.setWindowTitle('Radar Configuration')
@@ -63,15 +64,23 @@ class RadarConfigGUI(QtWidgets.QWidget):
         self.range_combobox.addItems(self.range_values.keys())
         self.range_combobox.currentIndexChanged.connect(self.set_range)
         v_layout_left.addWidget(self.range_combobox)
-
+        
+        gain_h_layout=QtWidgets.QHBoxLayout()
         self.gain_label = QtWidgets.QLabel('Gain')
         v_layout_left.addWidget(self.gain_label)
+        v_layout_left.addLayout(gain_h_layout)
+        
         self.gain_spinbox = QtWidgets.QSpinBox()
         self.gain_spinbox.setRange(0,100)
         self.gain_spinbox.setSingleStep(1)
         self.gain_spinbox.setValue(20)
         self.gain_spinbox.valueChanged.connect(self.set_gain)
-        v_layout_left.addWidget(self.gain_spinbox)
+
+        self.gain_auto_button = QtWidgets.QPushButton('Auto')   
+        self.gain_auto_button.clicked.connect(self.set_auto_gain)
+        gain_h_layout.addWidget(self.gain_spinbox)
+        gain_h_layout.addWidget(self.gain_auto_button)
+   
 
         self.mode_label = QtWidgets.QLabel('Mode')
         v_layout_left.addWidget(self.mode_label)
@@ -235,6 +244,23 @@ class RadarConfigGUI(QtWidgets.QWidget):
         command = RadarControlValue()
         command.key = 'gain'
         command.value = str(value+1)  
+        self.radar_node.command_publisher.publish(command)
+
+    def set_auto_gain(self):
+        command = RadarControlValue()
+        command.key = 'gain'
+        if not self.gain_auto_mode:
+            self.radar_node.get_logger().info('Setting auto gain')
+            command.value = 'auto'
+            self.gain_spinbox.setDisabled(True)
+            self.gain_label.setText('Gain Auto')
+            self.gain_auto_mode = True
+        else:
+            self.radar_node.get_logger().info('Setting manual gain')
+            command.value = str(self.gain_spinbox.value())
+            self.gain_spinbox.setDisabled(False)
+            self.gain_label.setText('Gain')
+            self.gain_auto_mode = False
         self.radar_node.command_publisher.publish(command)
 
     def set_mode(self):
@@ -404,7 +430,7 @@ def sync_radar_status(msg):
                                           [list(gui.range_values.values()).index(int(value))])
                                             if gui.range_values[gui.range_combobox.currentText()] != int(value) 
                                             else None,
-        'gain': lambda value: gui.gain_spinbox.setValue(math.floor(float(value))) if gui.gain_spinbox.value() != math.floor(float(value)) else None,
+        # 'gain': lambda value: gui.gain_spinbox.setValue(math.floor(float(value))) if gui.gain_spinbox.value() != math.floor(float(value)) else None,
         'mode': lambda value: gui.mode_combobox.setCurrentText(value) if gui.mode_combobox.currentText() != value else None,
         # 'sea_clutter': lambda value: gui.sea_clutter_spinbox.setValue(int(float(value))) if gui.sea_clutter_spinbox.value() != int(float(value)) else None,
         # 'auto_sea_clutter_nudge': lambda value: gui.sea_clutter_spinbox.setValue(int(value)) if gui.sea_clutter_spinbox.value() != int(value) else None,
@@ -427,6 +453,16 @@ def sync_radar_status(msg):
     for item in msg.items:
         if item.name in update_map and item.value is not None:
             update_map[item.name](item.value)
+
+        if item.name == 'gain' :
+             if item.value == 'auto':
+                if not gui.gain_auto_mode:
+                    gui.set_auto_gain()
+             elif item.value != 'auto' and math.floor(float(item.value)) != gui.gain_spinbox.value():
+                gui.gain_spinbox.setValue(math.floor(float(item.value)))
+                # gui.set_auto_gain()
+                
+                
 
         if (item.name == 'sea_clutter') :
             if item.value == 'auto' and not gui.sea_clutter_auto_mode:

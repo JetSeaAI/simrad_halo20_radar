@@ -1,58 +1,76 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import LaserScan
+from sensor_msgs.msg import PointCloud2
+from marine_sensor_msgs.msg import RadarSector
+import numpy as np
+import sensor_msgs_py.point_cloud2 as pc2
 
-class RadarMergeScan(Node):
+class HaloRadarMergeScan(Node):
     def __init__(self):
-        super().__init__('radar_merge_scan')
-        qos_profile = rclpy.qos.QoSProfile(depth=10, reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT)
-        self.subscription = self.create_subscription(
-            LaserScan,
-            '/radar/cropped_scan',
+        super().__init__('halo_radar_merge_scan')
+
+
+        parameters = {
+            'single_shot_pointcloud_topic': 'single_shot_radar_pointcloud',
+            'radar_input_topic': '/HaloA/data',
+            'merged_pointcloud_topic': 'merged_pointcloud'
+        }
+
+        for name, value in parameters.items():
+            self.declare_parameter(name, value)
+
+        self.pointcloud_subscription = self.create_subscription(
+            PointCloud2,
+            self.get_parameter("single_shot_pointcloud_topic").value,
             self.listener_callback,
-            qos_profile)
-        self.publisher = self.create_publisher(LaserScan, '/radar/merged_scan', 10)
-        self.scan_data = []
-        self.total_angle = 0.0
+            10)
+        
+        self.halo_subscription = self.create_subscription(
+            RadarSector,
+            self.get_parameter('radar_input_topic').value,
+            self.radar_data_callback,
+            10)
+            
+        self.pointcloud_publisher = self.create_publisher(
+            PointCloud2,
+            self.get_parameter("merged_pointcloud_topic").value,
+            10)
+        
+        self.full_stack_pointcloud = []
+        self.previous_angle=0
+        self.publish_merged_pointcloud = False
+
+    def radar_data_callback(self, msg):
+        angle= msg.angle_start
+        if angle>self.previous_angle:
+            self.get_logger().info(f"Full Scan. Publish the merged pointcloud")
+            self.publish_merged_pointcloud = True
+        self.previous_angle=angle
 
     def listener_callback(self, msg):
-        self.scan_data.append(msg)
-        self.total_angle += msg.angle_increment * len(msg.ranges)
-        # self.get_logger().info(f"Total angle: {self.total_angle}")
+        points = np.array(list(pc2.read_points(msg, skip_nans=False)))
+        if points.size == 0:
+            # self.get_logger().info(f"No points found in the PointCloud2 message.")
+            return
+        self.full_stack_pointcloud.append(points)
+        if self.publish_merged_pointcloud:
+            self.merge_pointcloud(msg)
+            self.publish_merged_pointcloud = False
+        
 
-        if self.total_angle >= 240.0 * (3.14159265359 / 180.0):  # 240 degrees in radians
-            merged_scan = self.merge_scans(self.scan_data)
-            self.publisher.publish(merged_scan)
-            self.scan_data = []
-            self.total_angle = 0.0
-
-    def merge_scans(self, scans):
-        if not scans:
-            return None
-
-        merged_scan = LaserScan()
-        merged_scan.header = scans[0].header
-        merged_scan.angle_min = scans[0].angle_min
-        merged_scan.angle_max = scans[-1].angle_max
-        merged_scan.angle_increment = scans[0].angle_increment
-        merged_scan.time_increment = scans[0].time_increment
-        merged_scan.scan_time = scans[0].scan_time
-        merged_scan.range_min = scans[0].range_min
-        merged_scan.range_max = scans[0].range_max
-        merged_scan.ranges = []
-        merged_scan.intensities = []
-
-        for scan in scans:
-            merged_scan.ranges.extend(scan.ranges)
-            merged_scan.intensities.extend(scan.intensities)
-
-        return merged_scan
+    def merge_pointcloud(self,msg):
+            full_pointcloud = np.concatenate(self.full_stack_pointcloud, axis=0)
+            header = msg.header
+            full_pointcloud_msg = pc2.create_cloud(header, msg.fields, full_pointcloud)
+            self.pointcloud_publisher.publish(full_pointcloud_msg)
+            self.full_stack_pointcloud = []  # Clear the data for the next stack
 
 def main(args=None):
     rclpy.init(args=args)
-    radar_merge_scan = RadarMergeScan()
-    rclpy.spin(radar_merge_scan)
-    radar_merge_scan.destroy_node()
+    cropper = HaloRadarMergeScan()
+    rclpy.spin(cropper)
+    cropper.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':

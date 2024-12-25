@@ -7,8 +7,10 @@ def generate_launch_description():
         '/HaloA/data',
         '/HaloA/state',
         '/parameter_events',
-        '/radar_image',
-        '/radar_pointcloud',
+        '/halo_radar/single_shot_radar_pointcloud',
+        '/halo_radar/merged_pointcloud',
+        '/halo_radar/cropped_pointcloud',
+        '/halo_radar/cropped_scan',
         '/rosout'
     ]
 
@@ -17,7 +19,10 @@ def generate_launch_description():
     
     return launch.LaunchDescription([
         launch.actions.ExecuteProcess(
-            cmd=['ros2', 'bag', 'record'] + topics_to_record + ['-o', f'./share/rosbag_record/{bag_name}'],
+            cmd=['ros2', 'bag', 'record'] +
+            ['-d','900']+ # 15 minutes
+              topics_to_record +
+                ['-o', f'./share/rosbag_record/{bag_name}'],
             output='screen'
         )
     ])
