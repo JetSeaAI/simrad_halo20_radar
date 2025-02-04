@@ -1,7 +1,11 @@
 import launch
+import subprocess
 import time
 
 def generate_launch_description():
+
+    project_name = 'halo'
+    
     topics_to_record = [
         '/HaloA/change_state',
         '/HaloA/data',
@@ -15,14 +19,21 @@ def generate_launch_description():
     ]
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    bag_name = f'recorded_rosbag_halo_{timestamp}'
-    
+    bag_dir = f'./share/rosbag_record/recorded_rosbag_{project_name}_{timestamp}'
+    duration = 900  # 15 minutes
+
+    def record_rosbag():
+        part=0
+        while True:
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            bag_name = f'{timestamp}_{project_name}_part{part}'
+            cmd = ['ros2', 'bag', 'record', '-o', f'{bag_dir}/{bag_name}'] + topics_to_record
+            process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=None, stderr=None)
+            part += 1
+            time.sleep(duration)
+            process.terminate()
+            process.wait()
+
     return launch.LaunchDescription([
-        launch.actions.ExecuteProcess(
-            cmd=['ros2', 'bag', 'record'] +
-            ['-d','900']+ # 15 minutes
-              topics_to_record +
-                ['-o', f'./share/rosbag_record/{bag_name}'],
-            output='screen'
-        )
+        launch.actions.OpaqueFunction(function=lambda context: record_rosbag())
     ])
