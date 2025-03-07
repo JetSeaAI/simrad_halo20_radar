@@ -1,3 +1,4 @@
+
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "marine_sensor_msgs/msg/radar_sector.hpp"
@@ -36,7 +37,7 @@ private:
     }
 
     void listener_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-        pcl::PointCloud<pcl::PointXYZ> cloud;
+        pcl::PointCloud<pcl::PointXYZI> cloud;
         pcl::fromROSMsg(*msg, cloud);
         if (cloud.empty()) {
             // RCLCPP_INFO(this->get_logger(), "No points found in the PointCloud2 message.");
@@ -49,13 +50,15 @@ private:
         }
     }
 
-    void merge_pointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-        pcl::PointCloud<pcl::PointXYZ> full_pointcloud;
-        for (const auto& cloud : full_stack_pointcloud_) {
+    void merge_pointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+    {
+        pcl::PointCloud<pcl::PointXYZI> full_pointcloud;
+        for (const auto &cloud : full_stack_pointcloud_)
+        {
             full_pointcloud += cloud;
         }
         sensor_msgs::msg::PointCloud2 full_pointcloud_msg;
-        pcl::toROSMsg(full_pointcloud, full_pointcloud_msg);
+        pcl::toROSMsg(full_pointcloud, full_pointcloud_msg); // from pcl to ros
         full_pointcloud_msg.header = msg->header;
         pointcloud_publisher_->publish(full_pointcloud_msg);
         full_stack_pointcloud_.clear();
@@ -67,7 +70,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
     rclcpp::Subscription<marine_sensor_msgs::msg::RadarSector>::SharedPtr halo_subscription_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
-    std::vector<pcl::PointCloud<pcl::PointXYZ>> full_stack_pointcloud_;
+    std::vector<pcl::PointCloud<pcl::PointXYZI>> full_stack_pointcloud_;
     float previous_angle_;
     bool publish_merged_pointcloud_;
 };

@@ -11,6 +11,8 @@ find_package(tf2 REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(pcl_conversions REQUIRED)
 
 include_directories(
   include
@@ -36,6 +38,8 @@ set(DEPENDENCIES
   nav_msgs
   tf2
   tf2_geometry_msgs
+  sensor_msgs
+  pcl_conversions
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -49,6 +53,17 @@ target_link_libraries(${PROJECT_NAME}
 
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
+  add_executable(halo_radar_visualize src/halo_radar/halo_radar_visualize.cpp)
+  ament_target_dependencies(halo_radar_visualize ${DEPENDENCIES})
+
+  install(TARGETS halo_radar_visualize
+    DESTINATION lib/${PROJECT_NAME})
+
+  add_executable(halo_radar_merge_scan src/halo_radar/halo_radar_merge_scan.cpp)
+  ament_target_dependencies(halo_radar_merge_scan ${DEPENDENCIES})
+
+  install(TARGETS halo_radar_merge_scan
+    DESTINATION lib/${PROJECT_NAME})
 
 add_executable(fix_angle_increments src/halo_radar/fix_angle_increments.cpp)
 ament_target_dependencies(fix_angle_increments ${DEPENDENCIES})
