@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
@@ -41,7 +42,15 @@ class HaloRadarDataCropper(Node):
         self.full_stack_pointcloud = []
 
     def listener_callback(self, msg):
-        full_pointcloud = np.array(list(pc2.read_points(msg, skip_nans=False)))
+        fields = [
+            pc2.PointField('x', 0, pc2.PointField.FLOAT32, 1),
+            pc2.PointField('y', 4, pc2.PointField.FLOAT32, 1),
+            pc2.PointField('z', 8, pc2.PointField.FLOAT32, 1),
+            pc2.PointField('intensity', 16, pc2.PointField.FLOAT32, 1),
+        ]
+
+        full_pointcloud = np.array(list(
+            pc2.read_points(msg, skip_nans=False, field_names=["x","y","z","intensity"])))
 
         # Filter points within the angle range of -120 degrees to 120 degrees
         x = full_pointcloud['x']
@@ -58,7 +67,7 @@ class HaloRadarDataCropper(Node):
         full_pointcloud = full_pointcloud[distance_mask]
 
         header = msg.header
-        full_pointcloud_msg = pc2.create_cloud(header, msg.fields, full_pointcloud)
+        full_pointcloud_msg = pc2.create_cloud(header, fields, full_pointcloud)
         self.pointcloud_publisher.publish(full_pointcloud_msg)
         self.full_stack_pointcloud = []  # Clear the data for the next stack
 
