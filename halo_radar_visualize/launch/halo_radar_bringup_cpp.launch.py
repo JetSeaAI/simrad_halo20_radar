@@ -44,17 +44,17 @@ def generate_launch_description():
             output='screen'
         ),
         Node(
-            package='halo_radar_visualize',
+            package='halo_radar',
             executable='halo_radar_data_cropper',
             namespace='halo_radar',
             name='halo_radar_data_cropper',
             parameters=[
                 {'input_pointcloud_topic': 'merged_pointcloud'},
                 {'cropped_pointcloud_topic': 'cropped_pointcloud'},
-                {'cropped_angle_start': -120},
-                {'cropped_angle_end': 120},
-                {'cropped_distance_start': 20},
-                {'cropped_distance_end': 120},
+                {'cropped_angle_start': -120.0},
+                {'cropped_angle_end': 120.0},
+                {'cropped_distance_start': 20.0},
+                {'cropped_distance_end': 120.0},
                 ],
             output='screen'
         ),

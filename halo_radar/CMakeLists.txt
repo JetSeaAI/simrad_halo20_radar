@@ -64,6 +64,12 @@ install(TARGETS ${PROJECT_NAME}
 
   install(TARGETS halo_radar_merge_scan
     DESTINATION lib/${PROJECT_NAME})
+  
+  add_executable(halo_radar_data_cropper src/halo_radar/halo_radar_data_cropper.cpp)
+  ament_target_dependencies(halo_radar_data_cropper ${DEPENDENCIES})
+
+  install(TARGETS halo_radar_data_cropper
+    DESTINATION lib/${PROJECT_NAME})
 
 add_executable(fix_angle_increments src/halo_radar/fix_angle_increments.cpp)
 ament_target_dependencies(fix_angle_increments ${DEPENDENCIES})
