@@ -4,10 +4,12 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <omp.h>
+#include <rclcpp_components/register_node_macro.hpp>
 
 class HaloRadarMergeScan : public rclcpp::Node {
 public:
-    HaloRadarMergeScan() : Node("halo_radar_merge_scan"), previous_angle_(0.0f) {
+     explicit HaloRadarMergeScan(const rclcpp::NodeOptions & options)
+        : Node("halo_radar_merge_scan", options), previous_angle_(0.0f) {
         this->declare_parameter<std::string>("single_shot_pointcloud_topic", "single_shot_radar_pointcloud");
         this->declare_parameter<std::string>("radar_input_topic", "/HaloA/data");
         this->declare_parameter<std::string>("merged_pointcloud_topic", "merged_pointcloud");
@@ -35,7 +37,7 @@ private:
 
                 pcl::toROSMsg(full_pointcloud_, merged_msg);
                 merged_msg.header.frame_id = "radar";
-                merged_msg.header.stamp = now(); // 或可取用最後一個 msg 的 timestamp
+                merged_msg.header.stamp = now(); // get_clock()->now();
 
                 pointcloud_publisher_->publish(merged_msg);
                 full_pointcloud_.clear();
@@ -50,7 +52,7 @@ private:
         if (cloud.empty()) {
             return;
         }
-        // 直接累積到全域變數
+        //merge pointcloud
         full_pointcloud_ += cloud;
     }
 
@@ -64,10 +66,4 @@ private:
     float previous_angle_;
 };
 
-int main(int argc, char * argv[]) {
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<HaloRadarMergeScan>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(HaloRadarMergeScan)

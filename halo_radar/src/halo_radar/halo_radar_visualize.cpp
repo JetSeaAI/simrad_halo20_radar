@@ -7,14 +7,15 @@
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <omp.h>
+#include <rclcpp_components/register_node_macro.hpp>
 
 using namespace std::chrono_literals;
 
 class RadarVisualizeNode : public rclcpp::Node
 {
 public:
-    RadarVisualizeNode()
-        : Node("radar_visualize_node"), publish_count_(0), previous_angle_(0.0)
+     explicit RadarVisualizeNode(const rclcpp::NodeOptions & options)
+        : Node("radar_visualize_node", options)
     {
         this->declare_parameter<std::string>("single_shot_pointcloud_topic", "single_shot_radar_pointcloud");
         this->declare_parameter<std::string>("radar_input_topic", "/HaloA/data");
@@ -124,11 +125,4 @@ private:
     int publish_count_;
 };
 
-int main(int argc, char *argv[])
-{
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<RadarVisualizeNode>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(RadarVisualizeNode)

@@ -13,6 +13,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 include_directories(
   include
@@ -53,23 +54,27 @@ target_link_libraries(${PROJECT_NAME}
 
 install(TARGETS ${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
-  add_executable(halo_radar_visualize src/halo_radar/halo_radar_visualize.cpp)
-  ament_target_dependencies(halo_radar_visualize ${DEPENDENCIES})
 
-  install(TARGETS halo_radar_visualize
-    DESTINATION lib/${PROJECT_NAME})
+add_library(halo_radar_components SHARED
+  src/halo_radar/halo_radar_visualize.cpp
+  src/halo_radar/halo_radar_merge_scan.cpp
+  src/halo_radar/halo_radar_data_cropper.cpp
+)
 
-  add_executable(halo_radar_merge_scan src/halo_radar/halo_radar_merge_scan.cpp)
-  ament_target_dependencies(halo_radar_merge_scan ${DEPENDENCIES})
+ament_target_dependencies(halo_radar_components
+  ${DEPENDENCIES}
+  rclcpp_components
+)
 
-  install(TARGETS halo_radar_merge_scan
-    DESTINATION lib/${PROJECT_NAME})
-  
-  add_executable(halo_radar_data_cropper src/halo_radar/halo_radar_data_cropper.cpp)
-  ament_target_dependencies(halo_radar_data_cropper ${DEPENDENCIES})
+rclcpp_components_register_nodes(halo_radar_components
+  "RadarVisualizeNode"
+  "HaloRadarMergeScan"
+  "HaloRadarDataCropper"
+)
 
-  install(TARGETS halo_radar_data_cropper
-    DESTINATION lib/${PROJECT_NAME})
+install(TARGETS halo_radar_components
+  DESTINATION lib
+)
 
 add_executable(fix_angle_increments src/halo_radar/fix_angle_increments.cpp)
 ament_target_dependencies(fix_angle_increments ${DEPENDENCIES})
@@ -82,6 +87,7 @@ ament_target_dependencies(fix_scan_times ${DEPENDENCIES})
 
 install(TARGETS fix_scan_times
   DESTINATION lib/${PROJECT_NAME})
+
 
 ament_export_dependencies(${dependencies})
 

@@ -7,11 +7,13 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <rclcpp_components/register_node_macro.hpp>
 
 class HaloRadarDataCropper : public rclcpp::Node
 {
 public:
-    HaloRadarDataCropper() : Node("halo_radar_data_cropper")
+    explicit HaloRadarDataCropper(const rclcpp::NodeOptions & options)
+        : Node("halo_radar_data_cropper", options)
     {
         this->declare_parameter<std::string>("input_pointcloud_topic", "merged_pointcloud");
         this->declare_parameter<std::string>("cropped_pointcloud_topic", "cropped_pointcloud");
@@ -73,11 +75,4 @@ private:
     double dist_end_;
 };
 
-int main(int argc, char *argv[])
-{
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<HaloRadarDataCropper>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-}
+RCLCPP_COMPONENTS_REGISTER_NODE(HaloRadarDataCropper)
