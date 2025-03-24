@@ -5,6 +5,9 @@
 #include <vector>
 #include <cmath>
 #include <chrono>
+#include <pcl/point_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 using namespace std::chrono_literals;
 
@@ -59,7 +62,8 @@ private:
         double range_min = msg->range_min;
         double range_max = msg->range_max;
         const auto &intensities = msg->intensities;
-        std::vector<std::vector<float>> points;
+        pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
+        pcl_cloud.reserve(intensities.size() * intensities[0].echoes.size());
 
         angle_start -= offset_;
         if (angle_start - previous_angle_ > 0.001 && angle_start > 0.05)
@@ -71,45 +75,35 @@ private:
         {
             double angle = angle_start + i * angle_increment;
             const auto &echoes = intensities[i].echoes;
-            auto generated_points = generate_points(angle, echoes, range_min, range_max);
-            points.insert(points.end(), generated_points.begin(), generated_points.end());
+            for (size_t j = 0; j < echoes.size(); ++j)
+            {
+                if (echoes[j] > 0)
+                {
+                    double r = range_min + j * (range_max - range_min) / echoes.size();
+                    pcl::PointXYZI pt;
+                    pt.x = r * std::cos(angle);
+                    pt.y = r * std::sin(angle);
+                    pt.z = 0.0;
+                    pt.intensity = echoes[j];
+                    pcl_cloud.push_back(pt);
+                }
+            }
         }
 
         previous_angle_ = angle_start + (intensities.size() - 1) * angle_increment;
-        publish_pointcloud(points);
+
+        sensor_msgs::msg::PointCloud2 ros_cloud;
+        pcl::toROSMsg(pcl_cloud, ros_cloud);
+        ros_cloud.header.frame_id = pointcloud_.header.frame_id;
+        ros_cloud.header.stamp = this->get_clock()->now();
+        publish_pointcloud(ros_cloud);
+
         publish_count_++;
     }
 
-    std::vector<std::vector<float>> generate_points(double angle, const std::vector<float> &intensities_echoes, double range_min, double range_max)
+    void publish_pointcloud(const sensor_msgs::msg::PointCloud2 &ros_cloud)
     {
-        std::vector<std::vector<float>> points;
-        for (size_t i = 0; i < intensities_echoes.size(); ++i)
-        {
-            if (intensities_echoes[i] > 0)
-            {
-                double r = range_min + i * (range_max - range_min) / intensities_echoes.size();
-                double x = r * std::cos(angle);
-                double y = r * std::sin(angle);
-                double z = 0.0;
-                points.push_back({static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), intensities_echoes[i]});
-            }
-        }
-        return points;
-    }
-
-    void publish_pointcloud(const std::vector<std::vector<float>> &points)
-    {
-        pointcloud_.header.stamp = this->get_clock()->now();
-        pointcloud_.width = points.size();
-
-        std::vector<uint8_t> data(points.size() * pointcloud_.point_step);
-        for (size_t i = 0; i < points.size(); ++i)
-        {
-            std::memcpy(&data[i * pointcloud_.point_step], points[i].data(), pointcloud_.point_step);
-        }
-        pointcloud_.data = std::move(data);
-
-        pointcloud_publisher_->publish(pointcloud_);
+        pointcloud_publisher_->publish(ros_cloud);
     }
 
     void report_publish_rate()
