@@ -32,7 +32,9 @@ colcon build --symlink-install
 
 ## Node
 
-The 'halo_radar' package provides a C++ node. This node handles the communication with the radar device and publishes the radar data to the relevant topics.
+The 'halo_radar' package provides several C++ node. This node handles the communication with the radar device and publishes the radar data to the relevant topics.
+
+- `halo_radar`: Provides a interface the radar to communication  with the radar
 
 ```bash
 ros2 run halo_radar halo_radar
@@ -65,12 +67,49 @@ ros2 run halo_radar_visualize halo_radar_data_cropper
 
 ```
 
+## Components
+
+The `halo_radar` package provides the following components, which can be used with a `ComposableNodeContainer`:
+
+### RadarVisualizeNode
+
+- **Description**: Processes radar sector data and generates a single-shot pointcloud for visualization.
+- **Parameters**:
+  - `single_shot_pointcloud_topic` (string): Topic to publish the single-shot pointcloud. Default: `single_shot_radar_pointcloud`.
+  - `radar_input_topic` (string): Topic to subscribe to radar sector data. Default: `/HaloA/data`.
+  - `frame_id` (string): Frame ID for the pointcloud. Default: `radar`.
+
+### HaloRadarMergeScan
+
+- **Description**: Merges multiple single-shot pointclouds into a single, continuous pointcloud.
+- **Parameters**:
+  - `single_shot_pointcloud_topic` (string): Topic to subscribe to single-shot pointclouds. Default: `single_shot_radar_pointcloud`.
+  - `radar_input_topic` (string): Topic to subscribe to radar sector data. Default: `/HaloA/data`.
+  - `merged_pointcloud_topic` (string): Topic to publish the merged pointcloud. Default: `merged_pointcloud`.
+
+### HaloRadarDataCropper
+
+- **Description**: Crops the merged pointcloud to a specified angular and distance range.
+- **Parameters**:
+  - `input_pointcloud_topic` (string): Topic to subscribe to the merged pointcloud. Default: `merged_pointcloud`.
+  - `cropped_pointcloud_topic` (string): Topic to publish the cropped pointcloud. Default: `cropped_pointcloud`.
+  - `cropped_angle_start` (double): Start angle for cropping in degrees. Default: `-120.0`.
+  - `cropped_angle_end` (double): End angle for cropping in degrees. Default: `120.0`.
+  - `cropped_distance_start` (double): Start distance for cropping in meters. Default: `20.0`.
+  - `cropped_distance_end` (double): End distance for cropping in meters. Default: `120.0`.
+
 ## Launch File
 
-The `halo_radar_visualize` package includes a launch file `halo_radar_bringup.launch.py` which can be used to start the radar node, control panel, visualize node, and all pointcloud process nodes.
+> **Deprecated**: The `halo_radar_visualize` package includes a launch file `halo_radar_bringup.launch.py` which can be used to start the radar node, control panel, visualize node, and all pointcloud process nodes. However, this launch file is now deprecated.
 
 ```bash
 ros2 launch halo_radar_visualize halo_radar_bringup.launch.py
+```
+
+For better performance and resource management, it is recommended to use the `halo_radar_bringup_container` launch file, which leverages ROS2 composable nodes to optimize system efficiency.
+
+```bash
+ros2 launch halo_radar_visualize halo_radar_bringup_container.launch.py
 ```
 
 The `halo_radar_visualize` package also provides a launch file `halo_rosbag_record.launch.py` which can be used to record messages from simrad_halo20_radar packages.

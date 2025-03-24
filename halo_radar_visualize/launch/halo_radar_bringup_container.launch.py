@@ -1,6 +1,7 @@
 import launch
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 
 def generate_launch_description():
     """Generate launch description with multiple components."""
@@ -49,5 +50,11 @@ def generate_launch_description():
         ],
         output='both',
     )
+    control_panel_node =Node(
+            package='halo_radar_visualize',
+            executable='halo_radar_control_panel',
+            name='radar_control_panel',
+            output='screen'
+    )
 
-    return launch.LaunchDescription([container])
+    return launch.LaunchDescription([container, control_panel_node])
