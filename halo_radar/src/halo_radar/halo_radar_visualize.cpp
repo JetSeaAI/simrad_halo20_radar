@@ -1,6 +1,4 @@
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_field.hpp>
 #include <marine_sensor_msgs/msg/radar_sector.hpp>
 #include <vector>
 #include <cmath>
@@ -8,6 +6,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <omp.h>
 
 using namespace std::chrono_literals;
 
@@ -71,10 +70,12 @@ private:
             RCLCPP_WARN(this->get_logger(), "Angle Jump Detected. angle_start: %f, previous_angle: %f", angle_start, previous_angle_);
         }
 
-        for (size_t i = 0; i < intensities.size(); ++i)
+#pragma omp parallel for default(shared)
+        for (int i = 0; i < static_cast<int>(intensities.size()); ++i)
         {
             double angle = angle_start + i * angle_increment;
             const auto &echoes = intensities[i].echoes;
+
             for (size_t j = 0; j < echoes.size(); ++j)
             {
                 if (echoes[j] > 0)
@@ -85,6 +86,8 @@ private:
                     pt.y = r * std::sin(angle);
                     pt.z = 0.0;
                     pt.intensity = echoes[j];
+
+#pragma omp critical
                     pcl_cloud.push_back(pt);
                 }
             }

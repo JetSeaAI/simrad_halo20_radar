@@ -1,11 +1,12 @@
-
 #include <memory>
 #include <cmath>
 #include <vector>
 #include <string>
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <omp.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 class HaloRadarDataCropper : public rclcpp::Node
 {
@@ -34,60 +35,31 @@ public:
 private:
     void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
     {
-        sensor_msgs::msg::PointCloud2 cropped;
-        cropped.header = msg->header;
-        cropped.height = 1; 
-        cropped.is_bigendian = msg->is_bigendian;
-        cropped.is_dense = false;
+        pcl::PointCloud<pcl::PointXYZI> input_cloud;
+        pcl::fromROSMsg(*msg, input_cloud);
 
-        // 建立輸出雲的欄位結構 (x, y, z, intensity)
-        cropped.fields = msg->fields; 
-        cropped.fields.resize(4); 
-        cropped.fields[0].offset = 0;
-        cropped.fields[1].offset = 4;
-        cropped.fields[2].offset = 8;
-        cropped.fields[3].offset = 12;
+        pcl::PointCloud<pcl::PointXYZI> cropped_cloud;
+        cropped_cloud.reserve(input_cloud.size());
 
-        cropped.point_step = 16;
-
-        std::vector<uint8_t> data_buffer;
-        data_buffer.reserve(msg->width * cropped.point_step);
-
-        sensor_msgs::PointCloud2ConstIterator<float> iter_x(*msg, "x");
-        sensor_msgs::PointCloud2ConstIterator<float> iter_y(*msg, "y");
-        sensor_msgs::PointCloud2ConstIterator<float> iter_z(*msg, "z");
-        sensor_msgs::PointCloud2ConstIterator<float> iter_i(*msg, "intensity");
-
-        for (size_t idx = 0; idx < msg->width * msg->height;
-             ++idx, ++iter_x, ++iter_y, ++iter_z, ++iter_i)
+#pragma omp parallel for default(shared)
+        for (int i = 0; i < static_cast<int>(input_cloud.size()); ++i)
         {
-            float x = *iter_x;
-            float y = *iter_y;
-            float z = *iter_z;
-            float intensity = *iter_i;
-
-            float dist = std::sqrt(x * x + y * y + z * z);
-            float angle_deg = std::atan2(y, x) * 180.0f / static_cast<float>(M_PI);
+            const auto &pt = input_cloud[i];
+            float dist = std::sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
+            float angle_deg = std::atan2(pt.y, pt.x) * 180.0f / static_cast<float>(M_PI);
 
             if (angle_deg >= angle_start_ && angle_deg <= angle_end_ &&
                 dist >= dist_start_ && dist <= dist_end_)
             {
-                // 塞進 data_buffer
-                const uint8_t* raw_ptr = reinterpret_cast<const uint8_t*>(&x);
-                data_buffer.insert(data_buffer.end(), raw_ptr, raw_ptr + 4);
-                raw_ptr = reinterpret_cast<const uint8_t*>(&y);
-                data_buffer.insert(data_buffer.end(), raw_ptr, raw_ptr + 4);
-                raw_ptr = reinterpret_cast<const uint8_t*>(&z);
-                data_buffer.insert(data_buffer.end(), raw_ptr, raw_ptr + 4);
-                raw_ptr = reinterpret_cast<const uint8_t*>(&intensity);
-                data_buffer.insert(data_buffer.end(), raw_ptr, raw_ptr + 4);
+#pragma omp critical
+                cropped_cloud.push_back(pt);
             }
         }
 
-        cropped.row_step = static_cast<uint32_t>(data_buffer.size());
-        cropped.data = data_buffer;
-        cropped.width = cropped.data.size() / cropped.point_step;
-        pub_->publish(cropped);
+        sensor_msgs::msg::PointCloud2 output_msg;
+        pcl::toROSMsg(cropped_cloud, output_msg);
+        output_msg.header = msg->header;
+        pub_->publish(output_msg);
     }
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;

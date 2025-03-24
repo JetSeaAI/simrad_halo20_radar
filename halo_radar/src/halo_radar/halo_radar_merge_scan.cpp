@@ -1,14 +1,13 @@
-
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "marine_sensor_msgs/msg/radar_sector.hpp"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <omp.h>
 
 class HaloRadarMergeScan : public rclcpp::Node {
 public:
-    HaloRadarMergeScan() : Node("halo_radar_merge_scan"), previous_angle_(0), publish_merged_pointcloud_(false) {
+    HaloRadarMergeScan() : Node("halo_radar_merge_scan"), previous_angle_(0.0f) {
         this->declare_parameter<std::string>("single_shot_pointcloud_topic", "single_shot_radar_pointcloud");
         this->declare_parameter<std::string>("radar_input_topic", "/HaloA/data");
         this->declare_parameter<std::string>("merged_pointcloud_topic", "merged_pointcloud");
@@ -30,8 +29,17 @@ private:
     void radar_data_callback(const marine_sensor_msgs::msg::RadarSector::SharedPtr msg) {
         float angle = msg->angle_start;
         if (angle > previous_angle_) {
-            RCLCPP_INFO(this->get_logger(), "Full Scan. Publish the merged pointcloud");
-            publish_merged_pointcloud_ = true;
+            if (!full_pointcloud_.empty()) {
+                static sensor_msgs::msg::PointCloud2 merged_msg;
+                merged_msg.data.clear();
+
+                pcl::toROSMsg(full_pointcloud_, merged_msg);
+                merged_msg.header.frame_id = "radar";
+                merged_msg.header.stamp = now(); // 或可取用最後一個 msg 的 timestamp
+
+                pointcloud_publisher_->publish(merged_msg);
+                full_pointcloud_.clear();
+            }
         }
         previous_angle_ = angle;
     }
@@ -40,28 +48,10 @@ private:
         pcl::PointCloud<pcl::PointXYZI> cloud;
         pcl::fromROSMsg(*msg, cloud);
         if (cloud.empty()) {
-            // RCLCPP_INFO(this->get_logger(), "No points found in the PointCloud2 message.");
             return;
         }
-        full_stack_pointcloud_.push_back(cloud);
-        if (publish_merged_pointcloud_) {
-            merge_pointcloud(msg);
-            publish_merged_pointcloud_ = false;
-        }
-    }
-
-    void merge_pointcloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
-    {
-        pcl::PointCloud<pcl::PointXYZI> full_pointcloud;
-        for (const auto &cloud : full_stack_pointcloud_)
-        {
-            full_pointcloud += cloud;
-        }
-        sensor_msgs::msg::PointCloud2 full_pointcloud_msg;
-        pcl::toROSMsg(full_pointcloud, full_pointcloud_msg); // from pcl to ros
-        full_pointcloud_msg.header = msg->header;
-        pointcloud_publisher_->publish(full_pointcloud_msg);
-        full_stack_pointcloud_.clear();
+        // 直接累積到全域變數
+        full_pointcloud_ += cloud;
     }
 
     std::string single_shot_pointcloud_topic_;
@@ -70,9 +60,8 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
     rclcpp::Subscription<marine_sensor_msgs::msg::RadarSector>::SharedPtr halo_subscription_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
-    std::vector<pcl::PointCloud<pcl::PointXYZI>> full_stack_pointcloud_;
+    pcl::PointCloud<pcl::PointXYZI> full_pointcloud_;
     float previous_angle_;
-    bool publish_merged_pointcloud_;
 };
 
 int main(int argc, char * argv[]) {
