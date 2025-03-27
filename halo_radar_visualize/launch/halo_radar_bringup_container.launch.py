@@ -53,15 +53,28 @@ def generate_launch_description():
         ],
         output='both',
     )
+
+    halo_radar_node = Node(
+            package='halo_radar',
+            executable='halo_radar',
+            name='halo_radar_node',
+            output='screen',
+            parameters=[
+                {'range_correction_factor': 1.024},
+                {'frame_id': 'radar'}
+            ]
+        )
+
     control_panel_node =Node(
             package='halo_radar_visualize',
             executable='halo_radar_control_panel',
             name='radar_control_panel',
             namespace='halo_radar',
             output='screen'
-    ),
+    )
     laserscan_node= Node(
-            package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
+            package='pointcloud_to_laserscan', 
+            executable='pointcloud_to_laserscan_node',
             namespace='halo_radar',
             remappings=[('cloud_in', 'cropped_pointcloud'),
                         ('scan', 'cropped_scan')],
@@ -80,6 +93,6 @@ def generate_launch_description():
                 'inf_epsilon': 1.0
             }],
             name='pointcloud_to_laserscan'
-        ),
+        )
 
-    return launch.LaunchDescription([container, control_panel_node,laserscan_node])
+    return launch.LaunchDescription([container, control_panel_node,laserscan_node, halo_radar_node])
