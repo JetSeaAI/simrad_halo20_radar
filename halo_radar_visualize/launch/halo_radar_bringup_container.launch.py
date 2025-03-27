@@ -15,6 +15,7 @@ def generate_launch_description():
                 package='halo_radar',
                 plugin='RadarVisualizeNode',
                 name='radar_visualize',
+                namespace='halo_radar',
                 parameters=[
                     {'frame_id': 'radar'},
                     {'single_shot_pointcloud_topic': 'single_shot_radar_pointcloud'},
@@ -26,6 +27,7 @@ def generate_launch_description():
                 package='halo_radar',
                 plugin='HaloRadarMergeScan',
                 name='radar_merge_scan',
+                namespace='halo_radar',
                 parameters=[
                     {'merged_pointcloud_topic': 'merged_pointcloud'},
                     {'single_shot_pointcloud_topic': 'single_shot_radar_pointcloud'},
@@ -37,6 +39,7 @@ def generate_launch_description():
                 package='halo_radar',
                 plugin='HaloRadarDataCropper',
                 name='radar_data_cropper',
+                namespace='halo_radar',
                 parameters=[
                     {'input_pointcloud_topic': 'merged_pointcloud'},
                     {'cropped_pointcloud_topic': 'cropped_pointcloud'},
@@ -54,7 +57,29 @@ def generate_launch_description():
             package='halo_radar_visualize',
             executable='halo_radar_control_panel',
             name='radar_control_panel',
+            namespace='halo_radar',
             output='screen'
-    )
+    ),
+    laserscan_node= Node(
+            package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
+            namespace='halo_radar',
+            remappings=[('cloud_in', 'cropped_pointcloud'),
+                        ('scan', 'cropped_scan')],
+            parameters=[{
+                # 'target_frame': 'radar',
+                'transform_tolerance': 0.01,
+                'min_height': 0.0,
+                'max_height': 1.0,
+                'angle_min': -2.0943951024,  # -M_PI/2 -120deg
+                'angle_max': 2.0943951024,  # M_PI/2 120deg
+                'angle_increment': 0.003,  # same as angular resolution of radar
+                'scan_time': 1.1,
+                'range_min': 20.0,
+                'range_max': 120.0,
+                'use_inf': True,
+                'inf_epsilon': 1.0
+            }],
+            name='pointcloud_to_laserscan'
+        ),
 
-    return launch.LaunchDescription([container, control_panel_node])
+    return launch.LaunchDescription([container, control_panel_node,laserscan_node])
