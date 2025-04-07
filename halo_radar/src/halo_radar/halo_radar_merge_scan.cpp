@@ -31,29 +31,26 @@ private:
     void radar_data_callback(const marine_sensor_msgs::msg::RadarSector::SharedPtr msg) {
         float angle = msg->angle_start;
         if (angle > previous_angle_) {
-            if (!full_pointcloud_.empty()) {
-                static sensor_msgs::msg::PointCloud2 merged_msg;
-                merged_msg.data.clear();
-
-                pcl::toROSMsg(full_pointcloud_, merged_msg);
-                merged_msg.header.frame_id = "radar";
-                merged_msg.header.stamp = now(); // get_clock()->now();
-
-                pointcloud_publisher_->publish(merged_msg);
-                full_pointcloud_.clear();
+            if (!merged_msg_.data.empty()) {
+                merged_msg_.header.stamp = now(); // get_clock()->now();
+                pointcloud_publisher_->publish(merged_msg_);
+                merged_msg_.data.clear();
             }
         }
         previous_angle_ = angle;
     }
 
     void listener_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-        pcl::PointCloud<pcl::PointXYZI> cloud;
-        pcl::fromROSMsg(*msg, cloud);
-        if (cloud.empty()) {
+        if (msg->data.empty()) {
             return;
         }
-        //merge pointcloud
-        full_pointcloud_ += cloud;
+        // Incrementally update the merged_msg_ with new points
+        if (merged_msg_.data.empty()) {
+            merged_msg_ = *msg;
+        } else {
+            merged_msg_.data.insert(merged_msg_.data.end(), msg->data.begin(), msg->data.end());
+            merged_msg_.width += msg->width; // Update the width to reflect the total number of points
+        }
     }
 
     std::string single_shot_pointcloud_topic_;
@@ -62,7 +59,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscription_;
     rclcpp::Subscription<marine_sensor_msgs::msg::RadarSector>::SharedPtr halo_subscription_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
-    pcl::PointCloud<pcl::PointXYZI> full_pointcloud_;
+    sensor_msgs::msg::PointCloud2 merged_msg_; // Incrementally updated pointcloud message
     float previous_angle_;
 };
 

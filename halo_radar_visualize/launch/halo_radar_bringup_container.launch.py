@@ -58,6 +58,7 @@ def generate_launch_description():
             package='halo_radar',
             executable='halo_radar',
             name='halo_radar_node',
+            namespace='halo_radar',
             output='screen',
             parameters=[
                 {'range_correction_factor': 1.024},
