@@ -112,6 +112,12 @@ For better performance and resource management, it is recommended to use the `ha
 ros2 launch halo_radar_visualize halo_radar_bringup_container.launch.py
 ```
 
+### If you have issues with radar point cloud, try running the command below before launching the file
+
+```bash
+    export CYCLONEDDS_URI='<General><AllowMulticast>spdp</></>'
+```
+
 The `halo_radar_visualize` package also provides a launch file `halo_rosbag_record.launch.py` which can be used to record messages from simrad_halo20_radar packages.
 
 ```bash
