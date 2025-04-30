@@ -58,7 +58,6 @@ def generate_launch_description():
             package='halo_radar',
             executable='halo_radar',
             name='halo_radar_node',
-            namespace='halo_radar',
             output='screen',
             parameters=[
                 {'range_correction_factor': 1.024},
@@ -70,7 +69,6 @@ def generate_launch_description():
             package='halo_radar_visualize',
             executable='halo_radar_control_panel',
             name='radar_control_panel',
-            namespace='halo_radar',
             output='screen'
     )
     laserscan_node= Node(
