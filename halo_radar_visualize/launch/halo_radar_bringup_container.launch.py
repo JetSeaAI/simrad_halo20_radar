@@ -45,8 +45,8 @@ def generate_launch_description():
                     {'cropped_pointcloud_topic': 'cropped_pointcloud'},
                     {'cropped_angle_start': -120.0},
                     {'cropped_angle_end': 120.0},
-                    {'cropped_distance_start': 20.0},
-                    {'cropped_distance_end': 120.0},
+                    {'cropped_distance_start': 10.0},
+                    {'cropped_distance_end': 400.0},
                 ],
                 extra_arguments=[{'use_intra_process_comms': True}]
             ),
@@ -86,8 +86,8 @@ def generate_launch_description():
                 'angle_max': 2.0943951024,  # M_PI/2 120deg
                 'angle_increment': 0.003,  # same as angular resolution of radar
                 'scan_time': 1.1,
-                'range_min': 20.0,
-                'range_max': 120.0,
+                'range_min': 10.0,
+                'range_max': 400.0,
                 'use_inf': True,
                 'inf_epsilon': 1.0
             }],
